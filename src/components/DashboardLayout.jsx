@@ -45,9 +45,13 @@ const navigation = [
     subNav: [
       { name: "Product", href: "/inventory/productinfo", icon: Box },
       { name: "Stock & Purchase", href: "/inventory/stock-purchase", icon: ShoppingBag },
+
       { name: "Supplier Information", href: "/inventory/supplier-information", icon: Container },
       { name: "Sales History", href: "/inventory/sales-history", icon: ClipboardList },
       { name: "Transaction Traking", href: "/inventory/transaction-traking", icon: ArrowRightLeft },
+
+      { name: "WareHouse", href: "/inventory/warehouse", icon: ShoppingBag },
+
     ],
   },
   { name: "User Management", href: "/user-manegement", icon: User },
