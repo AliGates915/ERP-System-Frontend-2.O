@@ -68,14 +68,22 @@ const ManageCompanies = () => {
         },
     ]);
 
+    // Define mapping of countries to VAT numbers
+
     const countries = [
-        "Austria", "Belgium", "Bulgaria", "Croatia", "Cyprus", "Czechia", "Denmark", "Estonia",
-        "Finland", "France", "Germany", "Greece", "Hungary", "Ireland", "Italy", "Latvia",
-        "Lithuania", "Luxembourg", "Malta", "Netherlands", "Poland", "Portugal", "Romania",
-        "Slovakia", "Slovenia", "Spain", "Sweden", "United Kingdom", "Norway", "Switzerland",
-        "United States", "Canada", "Australia", "New Zealand", "India", "Pakistan", "China",
-        "Japan", "South Korea", "Brazil", "Mexico", "Argentina"
-    ];
+        "Pakistan",
+        "USA",
+        "UK",
+        "Canada"];
+
+    const countryVatMap = {
+        Pakistan: "PK123456789",
+        USA: "US987654321",
+        UK: "UK567890123",
+        Canada: "CA345678901",
+        // add more countries as needed
+    };
+
 
     const [newCompany, setNewCompany] = useState({
         name: "",
@@ -273,7 +281,16 @@ const ManageCompanies = () => {
                                         <Label className="flex items-center gap-2 text-sm font-medium">
                                             <MapPin className="w-4 h-4" /> Country
                                         </Label>
-                                        <Select value={newCompany.country} onValueChange={(val) => setNewCompany(prev => ({ ...prev, country: val }))}>
+                                        <Select
+                                            value={newCompany.country}
+                                            onValueChange={(val) =>
+                                                setNewCompany(prev => ({
+                                                    ...prev,
+                                                    country: val,
+                                                    vatNumber: countryVatMap[val] || "" // auto-fill VAT
+                                                }))
+                                            }
+                                        >
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select country" />
                                             </SelectTrigger>
@@ -291,7 +308,7 @@ const ManageCompanies = () => {
                                             VAT
                                         </Label>
                                         <Input
-                                            placeholder="Enter VAT Number"
+                                            placeholder="VAT Number"
                                             value={newCompany.vatNumber}
                                             onChange={(e) => setNewCompany(prev => ({ ...prev, vatNumber: e.target.value }))}
                                             className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
