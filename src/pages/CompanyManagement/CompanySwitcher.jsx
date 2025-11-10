@@ -1,102 +1,92 @@
-import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Building2, ArrowRight } from "lucide-react";
+import { Building2, ChevronRight } from "lucide-react";
+import { toast } from "sonner";
 
 const mockCompanies = [
-    {
-        id: 1,
-        logo: "https://ui-avatars.com/api/?name=Tech+Corp",
-        name: "Tech Corp Solutions",
-        role: "Admin",
-    },
-    {
-        id: 2,
-        logo: "https://ui-avatars.com/api/?name=Bright+Retail",
-        name: "Bright Retail Pvt Ltd",
-        role: "Salesman",
-    },
-    {
-        id: 3,
-        logo: "https://ui-avatars.com/api/?name=Alpha+Enterprises",
-        name: "Alpha Enterprises",
-        role: "Manager",
-    },
+    { id: 1, name: "Afaq Distribution", role: "Admin" },
+    { id: 2, name: "Société Générale Imports", role: "Accountant" },
+    { id: 3, name: "Arfa Traders Paris", role: "Manager" },
+    { id: 4, name: "Bordeaux Logistics", role: "Supervisor" },
+    { id: 5, name: "Nice Merchandisers", role: "Sales Head" },
+    { id: 6, name: "Lyon Agro Distribution", role: "Finance Officer" },
+    { id: 7, name: "Toulouse Trading Co.", role: "Operations Manager" },
 ];
 
 const CompanySwitcher = () => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [currentCompany, setCurrentCompany] = useState(mockCompanies[0]);
+    const navigate = useNavigate();
 
-    const handleSwitchCompany = (company) => {
-        setCurrentCompany(company);
-        setIsOpen(false);
-        // You can trigger actual switch logic here
-        console.log(`Switched to company: ${company.name}`);
+    const selectCompany = (company) => {
+        toast.success(`Switched to ${company.name}`);
+        localStorage.setItem("selectedCompany", JSON.stringify(company));
+        navigate("/");
+    };
+
+    const getBadgeVariant = (role) => {
+        switch (role) {
+            case "Admin":
+                return "success";
+            case "Accountant":
+                return "destructive";
+            case "Manager":
+                return "outline";
+            case "Supervisor":
+                return "default";
+            case "Sales Head":
+                return "outline";
+            case "Finance Officer":
+            case "Operations Manager":
+                return "secondary";
+            default:
+                return "default";
+        }
     };
 
     return (
         <DashboardLayout>
-            <div className="flex justify-center items-center h-full py-10">
-                <Dialog open={isOpen} onOpenChange={setIsOpen}>
-                    <DialogTrigger asChild>
-                        <Button className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 py-3 px-6 flex items-center gap-2">
-                            <Users className="w-5 h-5" /> Switch Company
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-md bg-background/95 backdrop-blur-sm border-0 shadow-2xl p-6">
-                        <DialogHeader className="border-b border-border/50 pb-3 mb-4">
-                            <DialogTitle className="text-xl font-semibold flex items-center gap-2 text-foreground">
-                                <Building2 className="w-5 h-5 text-primary" /> Switch Company
-                            </DialogTitle>
-                        </DialogHeader>
+            <div className="min-h-screen flex justify-center bg-gradient-to-br from-background via-secondary to-background p-4">
+                <div className="w-full max-w-8xl justify-between">
+                    <div className="text-left mb-8">
+                        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+                            Select Company
+                        </h1>
+                        <p className="text-muted-foreground mt-2 flex items-center gap-2 justify-left">
+                            <Building2 className="w-4 h-4" />
+                            Choose a company to access
+                        </p>
+                    </div>
 
-                        <div className="space-y-4">
-                            {mockCompanies.map((company) => (
-                                <Card
-                                    key={company.id}
-                                    className={`flex items-center justify-between p-4 shadow-md hover:shadow-xl transition-all duration-300 rounded-lg cursor-pointer ${company.id === currentCompany.id
-                                        ? "bg-primary/10 border border-primary/30"
-                                        : "bg-background"
-                                        }`}
-                                    onClick={() => handleSwitchCompany(company)}
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <img
-                                            src={company.logo}
-                                            alt={company.name}
-                                            className="w-10 h-10 rounded-full border"
-                                        />
-                                        <div className="flex flex-col">
-                                            <span className="font-medium text-foreground">{company.name}</span>
-                                            <Badge
-                                                variant="secondary"
-                                                className={`text-sm ${company.role === "Admin"
-                                                    ? "bg-blue-100 text-blue-700 border-blue-200"
-                                                    : company.role === "Manager"
-                                                        ? "bg-amber-100 text-amber-700 border-amber-200"
-                                                        : "bg-green-100 text-green-700 border-green-200"
-                                                    }`}
-                                            >
-                                                {company.role}
-                                            </Badge>
+                    <div className="grid md:grid-cols-4 gap-4">
+                        {mockCompanies.map((company) => (
+                            <Card
+                                key={company.id}
+                                className="cursor-pointer transform transition-all duration-500 ease-out hover:scale-105 hover:shadow-2xl hover:border-primary/50 hover:bg-background/50"
+                                onClick={() => selectCompany(company)}
+                            >
+                                <CardHeader>
+                                    <div className="flex items-start justify-between w-full">
+                                        <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                                            <Building2 className="w-6 h-6 text-primary" />
                                         </div>
+                                        <Badge variant={getBadgeVariant(company.role)}>
+                                            {company.role}
+                                        </Badge>
                                     </div>
-                                    <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-8 w-8 p-0 hover:bg-primary/10 rounded-lg"
-                                    >
-                                        <ArrowRight className="w-4 h-4 text-primary" />
-                                    </Button>
-                                </Card>
-                            ))}
-                        </div>
-                    </DialogContent>
-                </Dialog>
+                                </CardHeader>
+                                <CardContent>
+                                    <CardTitle className="text-xl mb-2">{company.name}</CardTitle>
+                                    <CardDescription className="flex items-center justify-between">
+                                        <span>Access dashboard</span>
+                                        <ChevronRight className="w-4 h-4" />
+                                    </CardDescription>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+
+                </div>
             </div>
         </DashboardLayout>
     );
