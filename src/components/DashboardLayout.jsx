@@ -53,6 +53,7 @@ const navigation = [
       { name: "Sales History", href: "/inventory/sales-history", icon: ClipboardList },
       { name: "Transaction Traking", href: "/inventory/transaction-traking", icon: ArrowRightLeft },
       { name: "WareHouse", href: "/inventory/warehouse", icon: Warehouse },
+      { name: "Customer Defination", href: "/inventory/customer-defination", icon: User },
     ],
   },
   {
