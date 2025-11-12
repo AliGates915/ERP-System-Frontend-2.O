@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,33 +6,204 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Download, Edit, Trash2, Eye, AlertCircle, List } from "lucide-react";
+import { Plus, Search, Download, Edit, Trash2, Eye, AlertCircle, List, Loader } from "lucide-react";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import api from "../../Api/AxiosInstance"
+import CategoryViewDialog from "./Models/CategoryViewModal";
 
-// Mock category data
-const mockCategoryData = [
-    { id: 1, name: "Electronics", logo: "/images/electronics.png", description: "Gadgets, devices, and electronics items.", status: "Active" },
-    { id: 2, name: "Furniture", logo: "/images/furniture.png", description: "Home and office furniture.", status: "Active" },
-    { id: 3, name: "Clothing", logo: "/images/clothing.png", description: "Apparel and garments.", status: "Inactive" },
-];
 
 const CategoryPage = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [isAddOpen, setIsAddOpen] = useState(false);
-
-    const filteredCategories = mockCategoryData.filter(
+    const [loading, setLoading] = useState(false);
+    const [categoryList, setCategoryList] = useState([]);
+    const [editingCategory, setEditingCategory] = useState(null);
+    const [isViewOpen, setIsViewOpen] = useState(false); // Controls the view dialog open/close
+    const [viewCategory, setViewCategory] = useState(null); // Stores the category details to view
+    const [saving, setSaving] = useState(false);
+    const filteredCategories = categoryList.filter(
         (c) =>
             c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             c.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
             c.status.toLowerCase().includes(searchTerm.toLowerCase())
     );
-
+    const [newCategory, setNewCategory] = useState({
+        logo: null,
+        name: "",
+        description: "",
+        status: "Active",
+    });
+    const [summary, setSummary] = useState({
+        totalCategories: 0,
+        activeCategories: 0,
+    });
     const handleDownload = () => toast.success("Category report downloaded!");
-    const handleSaveCategory = () => { toast.success("Category added successfully!"); setIsAddOpen(false); };
-    const handleEdit = (id) => toast.success(`Editing category #${id}`);
-    const handleDelete = (id) => toast.error(`Deleting category #${id}`);
-    const handleView = (id) => toast.info(`Viewing category details #${id}`);
+
+    // Handle view
+    const handleView = async (categoryId) => {
+        // Open modal immediately
+        setViewCategory(null);   // reset previous data
+        setIsViewOpen(true);
+
+        try {
+            const response = await api.get(`/categories/${categoryId}`);
+            if (response.data.success && response.data.data) {
+                const item = response.data.data;
+                setViewCategory({
+                    id: item._id,
+                    name: item.categoryName || "-",
+                    description: item.description || "-",
+                    status: item.status || "-",
+                    logo: item.logo?.url || "",
+                    createdAt: new Date(item.createdAt).toLocaleDateString(),
+                });
+            } else {
+                toast.error("Failed to fetch category details");
+            }
+        } catch (error) {
+            console.error("❌ Failed to fetch category:", error);
+            toast.error("Failed to fetch category details");
+        }
+    };
+
+    const TableLoader = ({ message = "Loading..." }) => {
+        return (
+            <tr>
+                <td colSpan="9" className="py-20 text-center">
+                    <div className="flex flex-col items-center justify-center">
+                        <Loader className="w-10 h-10 text-primary animate-spin mb-2" />
+                        <p className="text-sm text-muted-foreground font-medium">{message}</p>
+                    </div>
+                </td>
+            </tr>
+        );
+    };
+
+
+    // 🟢 Fetch Category Data
+    const fetchCategoryList = useCallback(async () => {
+        try {
+            setLoading(true);
+            const response = await api.get("/categories");
+            console.log("Res", response.data);
+
+            if (response.data.success && Array.isArray(response.data.data)) {
+                const formattedData = response.data.data.map((item) => ({
+                    id: item._id,
+                    name: item.categoryName || "-",
+                    description: item.description || "-",
+                    status: item.status || "-",
+                    logo: item.logo?.url || "",
+                    createdAt: new Date(item.createdAt).toLocaleDateString(),
+                }));
+
+                setCategoryList(formattedData);
+
+                // ✅ Set summary from API response
+                setSummary({
+                    totalCategories: response.data.summary?.totalCategories || formattedData.length,
+                    activeCategories: response.data.summary?.activeCategories || formattedData.filter(c => c.status === "Active").length,
+                });
+            } else {
+                console.warn("⚠️ Unexpected API response structure:", response.data);
+                setCategoryList([]);
+                setSummary({ totalCategories: 0, activeCategories: 0 });
+            }
+        } catch (error) {
+            console.error("❌ Failed to fetch Categories:", error);
+            setSummary({ totalCategories: 0, activeCategories: 0 });
+        } finally {
+            setTimeout(() => setLoading(false), 1500);
+        }
+    }, []);
+
+
+    useEffect(() => {
+        fetchCategoryList();
+    }, [fetchCategoryList]);
+
+
+    const clearForm = () => {
+        setNewCategory({
+            logo: null,
+            logoFile: null,
+            name: "",
+            description: "",
+            status: "Active",
+        });
+        setEditingCategory(null);
+    };
+
+    // 🟢 Save New Category
+    const handleSaveCategory = async () => {
+        try {
+            setSaving(true); // ✅ show spinner immediately
+
+            const formData = new FormData();
+            formData.append("categoryName", newCategory.name);
+            formData.append("description", newCategory.description);
+            formData.append("status", newCategory.status);
+            if (newCategory.logoFile) formData.append("logo", newCategory.logoFile);
+
+            if (editingCategory) {
+                // ✏️ Update category
+                await api.put(`/categories/${editingCategory.id}`, formData);
+                toast.success("Category updated successfully!");
+            } else {
+                // ➕ Add new category
+                await api.post("/categories", formData);
+                toast.success("Category added successfully!");
+            }
+
+            setIsAddOpen(false);
+            clearForm();
+            setEditingCategory(null);
+            fetchCategoryList();
+        } catch (error) {
+            console.error("❌ Failed to save category:", error);
+            toast.error("Failed to save category");
+        } finally {
+            setSaving(false); // hide spinner
+        }
+    };
+
+
+
+    // 🟢 Edit Category
+    const handleEdit = (category) => {
+        setEditingCategory(category);
+        setNewCategory({
+            name: category.name,
+            description: category.description,
+            status: category.status,
+            logo: category.logo,
+        });
+        setIsAddOpen(true);
+    };
+
+    // 🟢 Delete Category
+    const handleDelete = async (categoryId) => {
+        try {
+            const confirmDelete = window.confirm("Are you sure you want to delete this category?");
+            if (!confirmDelete) return;
+
+            setLoading(true); // ✅ show loader
+
+            await api.delete(`/categories/${categoryId}`);
+            toast.success("Category deleted successfully!");
+
+            setCategoryList((prev) => prev.filter((c) => c.id !== categoryId));
+
+            setLoading(false); // ✅ hide loader
+        } catch (error) {
+            console.error("❌ Failed to delete category:", error);
+            toast.error("Failed to delete category");
+            setLoading(false); // hide loader if error occurs
+        }
+    };
+
+
 
     return (
         <DashboardLayout>
@@ -75,25 +246,50 @@ const CategoryPage = () => {
                                     {/* Logo / Image */}
                                     <div className="space-y-2">
                                         <Label className="text-sm font-medium text-foreground flex items-center gap-2">Logo / Image</Label>
-                                        <Input type="file" className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200" />
+                                        <Input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) =>
+                                                setNewCategory({
+                                                    ...newCategory,
+                                                    logoFile: e.target.files[0],
+                                                })
+                                            }
+                                        />
+
                                     </div>
 
                                     {/* Category Name */}
                                     <div className="space-y-2">
                                         <Label className="text-sm font-medium text-foreground flex items-center gap-2">Category Name</Label>
-                                        <Input placeholder="e.g., Electronics" className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200" />
+                                        <Input
+                                            placeholder="e.g., Electronics"
+                                            value={newCategory.name}
+                                            onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+                                        />
                                     </div>
 
                                     {/* Description */}
                                     <div className="space-y-2">
                                         <Label className="text-sm font-medium text-foreground flex items-center gap-2">Description</Label>
-                                        <Input placeholder="Category description" className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200" />
+                                        <Input
+                                            placeholder="Category description"
+                                            value={newCategory.description}
+                                            onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
+                                        />
                                     </div>
 
                                     {/* Status */}
                                     <div className="space-y-2">
-                                        <Label className="text-sm font-medium text-foreground flex items-center gap-2">Status</Label>
-                                        <Select>
+                                        <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+                                            Status
+                                        </Label>
+                                        <Select
+                                            value={newCategory.status}
+                                            onValueChange={(value) =>
+                                                setNewCategory({ ...newCategory, status: value })
+                                            }
+                                        >
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select Status" />
                                             </SelectTrigger>
@@ -104,11 +300,14 @@ const CategoryPage = () => {
                                         </Select>
                                     </div>
 
+
                                     <Button
-                                        className="w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-base font-medium"
+                                        className="w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-base font-medium flex items-center justify-center gap-2"
                                         onClick={handleSaveCategory}
+                                        disabled={saving} // disables button while saving
                                     >
-                                        Save Category
+                                        {saving && <Loader className="w-4 h-4 animate-spin" />}
+                                        {saving ? (editingCategory ? "Updating..." : "Saving...") : (editingCategory ? "Update Category" : "Save Category")}
                                     </Button>
                                 </div>
                             </DialogContent>
@@ -123,7 +322,7 @@ const CategoryPage = () => {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm font-medium text-blue-700">Total Categories</p>
-                                    <p className="text-2xl font-bold text-blue-900">{mockCategoryData.length}</p>
+                                    <p className="text-2xl font-bold text-blue-900">{summary.totalCategories}</p>
                                 </div>
                                 <div className="p-2 bg-blue-500/10 rounded-lg">
                                     <List className="w-5 h-5 text-blue-600" />
@@ -137,9 +336,7 @@ const CategoryPage = () => {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm font-medium text-emerald-700">Active Categories</p>
-                                    <p className="text-2xl font-bold text-emerald-900">
-                                        {mockCategoryData.filter((c) => c.status === "Active").length}
-                                    </p>
+                                    <p className="text-2xl font-bold text-emerald-900">{summary.activeCategories}</p>
                                 </div>
                                 <div className="p-2 bg-emerald-500/10 rounded-lg">
                                     <AlertCircle className="w-5 h-5 text-emerald-600" />
@@ -187,31 +384,66 @@ const CategoryPage = () => {
                                         <th className="px-6 py-4 text-center text-sm font-semibold text-foreground/80 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-border/30">
-                                    {filteredCategories.map((category, index) => (
-                                        <tr key={category.id} className="group hover:bg-primary/5 transition-all duration-300 ease-in-out transform hover:scale-[1.002]">
-                                            <td className="px-6 py-4 font-semibold">{index + 1}</td>
-                                            <td className="px-6 py-4"><img src={category.logo} alt={category.name} className="w-8 h-8 rounded-lg object-cover" /></td>
-                                            <td className="px-6 py-4 font-semibold">{category.name}</td>
-                                            <td className="px-6 py-4">{category.description}</td>
-                                            <td className="px-6 py-4"><Badge variant={category.status === "Active" ? "default" : "secondary"}>{category.status}</Badge></td>
-                                            <td className="px-6 py-4 text-center flex justify-center gap-1">
-                                                <Button variant="ghost" size="sm" onClick={() => handleView(category.id)} className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 rounded-lg"><Eye className="w-4 h-4" /></Button>
-                                                <Button variant="ghost" size="sm" onClick={() => handleEdit(category.id)} className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600 rounded-lg"><Edit className="w-4 h-4" /></Button>
-                                                <Button variant="ghost" size="sm" onClick={() => handleDelete(category.id)} className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 rounded-lg"><Trash2 className="w-4 h-4" /></Button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
+
+                                {loading ? (
+                                    <TableLoader message="Fetching categories..." />
+                                ) : (
+                                    <tbody className="divide-y divide-border/30">
+                                        {filteredCategories.length > 0 ? (
+                                            filteredCategories.map((category, index) => (
+                                                <tr key={category.id} className="group hover:bg-primary/5 transition-all duration-300 ease-in-out transform hover:scale-[1.002]">
+                                                    <td className="px-6 py-4 font-semibold">{index + 1}</td>
+                                                    <td className="px-6 py-4">
+                                                        <img src={category.logo} alt={category.name} className="w-8 h-8 rounded-lg object-cover" />
+                                                    </td>
+                                                    <td className="px-6 py-4 font-semibold">{category.name}</td>
+                                                    <td className="px-6 py-4">{category.description}</td>
+                                                    <td className="px-6 py-4">
+                                                        <Badge variant={category.status === "Active" ? "default" : "secondary"}>{category.status}</Badge>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center flex justify-center gap-1">
+                                                        <Button variant="ghost" size="sm" onClick={() => handleView(category.id)} className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 rounded-lg">
+                                                            <Eye className="w-4 h-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleEdit(category)}
+                                                            className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600 rounded-lg"
+                                                        >
+                                                            <Edit className="w-4 h-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleDelete(category.id)}
+                                                            className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 rounded-lg"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan={6} className="py-12 text-center text-muted-foreground">
+                                                    <List className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                                                    <p className="font-medium text-lg">No categories found</p>
+                                                    <p className="text-sm mt-2">Try adjusting your search or add a new category</p>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                )}
                             </table>
 
-                            {filteredCategories.length === 0 && (
-                                <div className="text-center py-12">
-                                    <List className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-                                    <p className="text-muted-foreground font-medium text-lg">No categories found</p>
-                                    <p className="text-sm text-muted-foreground mt-2">Try adjusting your search or add a new category</p>
-                                </div>
-                            )}
+
+                            {/* inside your component JSX */}
+                            <CategoryViewDialog
+                                isOpen={isViewOpen}
+                                onOpenChange={setIsViewOpen}
+                                category={viewCategory}
+                            />
                         </div>
                     </CardContent>
                 </Card>

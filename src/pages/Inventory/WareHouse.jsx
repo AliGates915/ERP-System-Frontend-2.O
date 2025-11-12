@@ -3,6 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import WarehouseViewModal from "./Models/WareHouseModal";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +33,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
+import api from "../../Api/AxiosInstance";
 import {
   Select,
   SelectContent,
@@ -49,16 +51,24 @@ import {
 const WareHouse = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
-
+  const [loading, setLoading] = useState(false);
   const [warehouses, setWarehouses] = useState([]);
+
+  // Loader
+  const Loader = ({ message = "Loading..." }) => {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 w-full">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-muted-foreground font-medium">{message}</p>
+      </div>
+    );
+  };
 
   // 🟢 Fetch Warehouse Data
   const fetchWareHouse = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL}/warehouses`
-      );
+      const response = await api.get("/warehouses");
 
       if (response.data.success && Array.isArray(response.data.data)) {
         const formattedData = response.data.data.map((w) => ({
@@ -108,7 +118,7 @@ const WareHouse = () => {
   const [tempVisibleFields, setTempVisibleFields] = useState("");
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
   const [fieldLimitAlert, setFieldLimitAlert] = useState(false);
-  const [loading, setLoading] = useState(true);
+
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [viewWarehouse, setViewWarehouse] = useState(null);
   const handleCustomizeOpen = (open) => {
@@ -153,10 +163,8 @@ const WareHouse = () => {
         },
       };
 
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/warehouses`,
-        payload
-      );
+      const response = await api.post(
+        `/warehouses`, payload);
 
       if (response.data.success) {
         toast.success("✅ Warehouse added successfully!");
@@ -195,8 +203,8 @@ const WareHouse = () => {
 
     try {
       setLoading(true);
-      const response = await axios.delete(
-        `${import.meta.env.VITE_API_BASE_URL}/warehouses/${id}`
+      const response = await api.delete(
+        `/warehouses/${id}`
       );
 
       if (response.data.success) {
@@ -251,8 +259,8 @@ const WareHouse = () => {
         },
       };
 
-      const response = await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL}/warehouses/${newWarehouse.id}`,
+      const response = await api.put(
+        `/warehouses/${newWarehouse.id}`,
         payload
       );
 
@@ -532,271 +540,225 @@ const WareHouse = () => {
 
         {/* Warehouse Table */}
 
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-16">
-            <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-muted-foreground font-medium">
-              Loading warehouse data...
-            </p>
-          </div>
-        ) : (
-          <Card className="border-0 shadow-xl hover:shadow-2xl transition-all duration-500 bg-gradient-to-br from-background to-muted/5 overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5 border-b border-primary/20 pb-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent flex items-center gap-2">
-                  <Warehouse className="w-5 h-5 text-primary" />
-                  Warehouse Directory
-                </CardTitle>
-                <div className="flex items-center gap-3">
-                  <Badge
-                    variant="secondary"
-                    className="bg-primary/10 text-primary border-primary/20"
-                  >
-                    {filteredWarehouses.length} warehouses
-                  </Badge>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setIsCustomizeOpen(true);
-                    }}
-                    className="bg-gradient-to-r from-primary to-primary/90 text-white"
-                  >
-                    Customize
-                  </Button>
-                </div>
+
+        <Card className="border-0 shadow-xl hover:shadow-2xl transition-all duration-500 bg-gradient-to-br from-background to-muted/5 overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5 border-b border-primary/20 pb-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent flex items-center gap-2">
+                <Warehouse className="w-5 h-5 text-primary" />
+                Warehouse Directory
+              </CardTitle>
+              <div className="flex items-center gap-3">
+                <Badge
+                  variant="secondary"
+                  className="bg-primary/10 text-primary border-primary/20"
+                >
+                  {filteredWarehouses.length} warehouses
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setIsCustomizeOpen(true);
+                  }}
+                  className="bg-gradient-to-r from-primary to-primary/90 text-white"
+                >
+                  Customize
+                </Button>
               </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gradient-to-r from-muted/40 to-muted/20 border-b border-border/50">
-                    <tr>
-                      {visibleFields.includes("sr") && (
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                          Sr
-                        </th>
-                      )}
-                      {visibleFields.includes("name") && (
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                          Warehouse
-                        </th>
-                      )}
-                      {visibleFields.includes("address") && (
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                          Address
-                        </th>
-                      )}
-                      {visibleFields.includes("incharge") && (
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                          Incharge
-                        </th>
-                      )}
-                      {visibleFields.includes("itemsInStock") && (
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                          Items in Stock
-                        </th>
-                      )}
-                      {visibleFields.includes("PurchaseValue") && (
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                          Value
-                        </th>
-                      )}
+            </div>
+          </CardHeader>
+
+
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gradient-to-r from-muted/40 to-muted/20 border-b border-border/50">
+                  <tr>
+                    {visibleFields.includes("sr") && (
                       <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                        Actions
+                        Sr
                       </th>
+                    )}
+                    {visibleFields.includes("name") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
+                        Warehouse
+                      </th>
+                    )}
+                    {visibleFields.includes("address") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
+                        Address
+                      </th>
+                    )}
+                    {visibleFields.includes("incharge") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
+                        Incharge
+                      </th>
+                    )}
+                    {visibleFields.includes("itemsInStock") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
+                        Items in Stock
+                      </th>
+                    )}
+                    {visibleFields.includes("PurchaseValue") && (
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
+                        Value
+                      </th>
+                    )}
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+
+                {loading ? (
+                  <tbody>
+                    <tr>
+                      <td colSpan={visibleFields.length + 1}>
+                        <Loader message="Loading warehouse data..." />
+                      </td>
                     </tr>
-                  </thead>
-
+                  </tbody>
+                ) : (
                   <tbody className="divide-y divide-border/30">
-                    {warehouses.map((warehouse, index) => (
-                      <tr
-                        key={warehouse.id}
-                        className="group hover:bg-primary/5 transition-all duration-300 ease-in-out transform hover:scale-[1.002]"
-                      >
-                        {visibleFields.includes("sr") && (
-                          <td className="px-6 py-4 font-semibold">
-                            {index + 1}
-                          </td>
-                        )}
-                        {visibleFields.includes("name") && (
+                    {filteredWarehouses.length > 0 ? (
+                      filteredWarehouses.map((warehouse, index) => (
+                        <tr
+                          key={warehouse.id}
+                          className="group hover:bg-primary/5 transition-all duration-300 ease-in-out transform hover:scale-[1.002]"
+                        >
+                          {visibleFields.includes("sr") && (
+                            <td className="px-6 py-4 font-semibold">{index + 1}</td>
+                          )}
+                          {visibleFields.includes("name") && (
+                            <td className="px-6 py-4">
+                              <div className="font-semibold text-foreground group-hover:text-primary transition-colors duration-200 flex items-center gap-2">
+                                <Warehouse className="w-4 h-4 text-primary/60" />
+                                {warehouse.name}
+                              </div>
+                            </td>
+                          )}
+                          {visibleFields.includes("address") && (
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <MapPin className="w-4 h-4 text-amber-600" />
+                                <span>{warehouse.address}</span>
+                              </div>
+                            </td>
+                          )}
+                          {visibleFields.includes("incharge") && (
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-2">
+                                <User className="w-4 h-4 text-blue-600" />
+                                <span className="font-medium">{warehouse.incharge?.name}</span>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0 opacity-60 hover:opacity-100 transition-opacity"
+                                    >
+                                      <MoreVertical className="w-4 h-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-56">
+                                    <DropdownMenuItem className="flex items-center gap-2">
+                                      <Phone className="w-3 h-3" />
+                                      {warehouse.incharge?.contact}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="flex items-center gap-2">
+                                      <Mail className="w-3 h-3" />
+                                      {warehouse.incharge?.email}
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            </td>
+                          )}
+                          {visibleFields.includes("itemsInStock") && (
+                            <td className="px-6 py-4">
+                              <Badge
+                                variant="secondary"
+                                className="bg-emerald-100 text-emerald-700 border-emerald-200"
+                              >
+                                {warehouse.itemsInStock.toLocaleString()}
+                              </Badge>
+                            </td>
+                          )}
+                          {visibleFields.includes("PurchaseValue") && (
+                            <td className="px-6 py-4">
+                              <div className="font-medium text-foreground">
+                                PKR {warehouse.PurchaseValue.toLocaleString()}
+                              </div>
+                            </td>
+                          )}
                           <td className="px-6 py-4">
-                            <div className="font-semibold text-foreground group-hover:text-primary transition-colors duration-200 flex items-center gap-2">
-                              <Warehouse className="w-4 h-4 text-primary/60" />
-                              {warehouse.name}
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleView(warehouse)}
+                                className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 rounded-lg"
+                                title="View Details"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setNewWarehouse({
+                                    id: warehouse.id,
+                                    name: warehouse.name,
+                                    address: warehouse.address,
+                                    inchargeName: warehouse.incharge?.name || "",
+                                    inchargeContact: warehouse.incharge?.contact || "",
+                                    inchargeEmail: warehouse.incharge?.email || "",
+                                  });
+                                  setIsAddOpen(true);
+                                }}
+                                className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600 transition-all duration-200 rounded-lg"
+                                title="Edit Warehouse"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(warehouse.id)}
+                                className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 transition-all duration-200 rounded-lg"
+                                title="Delete Warehouse"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
                             </div>
                           </td>
-                        )}
-                        {visibleFields.includes("address") && (
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <MapPin className="w-4 h-4 text-amber-600" />
-                              <span>{warehouse.address}</span>
-                            </div>
-                          </td>
-                        )}
-                        {visibleFields.includes("incharge") && (
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              <User className="w-4 h-4 text-blue-600" />
-                              <span className="font-medium">
-                                {warehouse.incharge?.name}
-                              </span>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0 opacity-60 hover:opacity-100 transition-opacity"
-                                  >
-                                    <MoreVertical className="w-4 h-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent
-                                  align="end"
-                                  className="w-56"
-                                >
-                                  <DropdownMenuItem className="flex items-center gap-2">
-                                    <Phone className="w-3 h-3" />
-                                    {warehouse.incharge?.contact}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem className="flex items-center gap-2">
-                                    <Mail className="w-3 h-3" />
-                                    {warehouse.incharge?.email}
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </td>
-                        )}
-                        {visibleFields.includes("itemsInStock") && (
-                          <td className="px-6 py-4">
-                            <Badge
-                              variant="secondary"
-                              className="bg-emerald-100 text-emerald-700 border-emerald-200"
-                            >
-                              {warehouse.itemsInStock.toLocaleString()}
-                            </Badge>
-                          </td>
-                        )}
-                        {visibleFields.includes("PurchaseValue") && (
-                          <td className="px-6 py-4">
-                            <div className="font-medium text-foreground">
-                              PKR {warehouse.PurchaseValue.toLocaleString()}
-                            </div>
-                          </td>
-                        )}
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleView(warehouse)}
-                              className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 rounded-lg"
-                              title="View Details"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setNewWarehouse({
-                                  id: warehouse.id,
-                                  name: warehouse.name,
-                                  address: warehouse.address,
-                                  inchargeName: warehouse.incharge?.name || "",
-                                  inchargeContact:
-                                    warehouse.incharge?.contact || "",
-                                  inchargeEmail:
-                                    warehouse.incharge?.email || "",
-                                });
-                                setIsAddOpen(true); // Open the same dialog
-                              }}
-                              className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600 transition-all duration-200 rounded-lg"
-                              title="Edit Warehouse"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(warehouse.id)}
-                              className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 transition-all duration-200 rounded-lg"
-                              title="Delete Warehouse"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={visibleFields.length + 1}>
+                          <div className="text-center py-12">
+                            <Warehouse className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
+                            <p className="text-muted-foreground font-medium text-lg">
+                              No warehouses found
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-2">
+                              Try adjusting your search or add a new warehouse
+                            </p>
                           </div>
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                {/* Handle View UI */}
-                <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-                  <DialogContent className="max-w-md bg-white/95 backdrop-blur-xl border border-border/40 shadow-2xl rounded-2xl">
-                    <DialogHeader className="pb-3 border-b border-border/30">
-                      <DialogTitle className="text-lg font-semibold text-gray-900">
-                        🏢 Warehouse Details
-                      </DialogTitle>
-                    </DialogHeader>
-                    {viewWarehouse && (
-                      <div className="space-y-3 py-4">
-                        <p>
-                          <strong>Name:</strong> {viewWarehouse.name}
-                        </p>
-                        <p>
-                          <strong>Address:</strong> {viewWarehouse.address}
-                        </p>
-                        <p>
-                          <strong>Incharge Name:</strong>{" "}
-                          {viewWarehouse.incharge?.name}
-                        </p>
-                        <p>
-                          <strong>Incharge Contact:</strong>{" "}
-                          {viewWarehouse.incharge?.contact}
-                        </p>
-                        <p>
-                          <strong>Incharge Email:</strong>{" "}
-                          {viewWarehouse.incharge?.email}
-                        </p>
-                        <p>
-                          <strong>Items in Stock:</strong>{" "}
-                          {viewWarehouse.itemsInStock}
-                        </p>
-                        <p>
-                          <strong>Purchase Value:</strong> PKR{" "}
-                          {viewWarehouse.PurchaseValue.toLocaleString()}
-                        </p>
-                      </div>
                     )}
-                    <Button
-                      className="w-full mt-2 py-3 bg-gradient-to-r from-primary to-primary/90 text-white font-semibold rounded-xl"
-                      onClick={() => setIsViewOpen(false)}
-                    >
-                      Close
-                    </Button>
-                  </DialogContent>
-                </Dialog>
+                  </tbody>
 
-                {filteredWarehouses.length === 0 && (
-                  <div className="text-center py-12">
-                    <Warehouse className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-                    <p className="text-muted-foreground font-medium text-lg">
-                      No warehouses found
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Try adjusting your search or add a new warehouse
-                    </p>
-                  </div>
                 )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </table>
+            </div>
+          </CardContent>
+
+        </Card>
+
       </div>
 
       <Dialog open={isCustomizeOpen} onOpenChange={handleCustomizeOpen}>
@@ -860,6 +822,13 @@ const WareHouse = () => {
           </Button>
         </DialogContent>
       </Dialog>
+
+      {/* Warehouse View */}
+      <WarehouseViewModal
+        isOpen={isViewOpen}
+        onClose={() => setIsViewOpen(false)}
+        viewWarehouse={viewWarehouse}
+      />
     </DashboardLayout>
   );
 };
