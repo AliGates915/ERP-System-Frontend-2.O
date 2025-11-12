@@ -11,50 +11,53 @@ import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login } = useAuth(); 
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
- const handleLogin = async (e) => {
-  e.preventDefault();
+  const handleLogin = async (e) => {
+    e.preventDefault();
 
-  if (!email.trim()) {
-    toast.error("Please enter your email");
-    return;
-  }
-
-  if (!password.trim()) {
-    toast.error("Please enter your password");
-    return;
-  }
-
-  try {
-    setLoading(true);
-
-    const res = await api.post("/auth/login", { email, password });
-
-    if (res?.data?.token) {
-      toast.success("Login successful!");
-
-      // ✅ Save user info + token in localStorage via AuthContext
-      login(res.data.user, res.data.token);
-      // ✅ Redirect after a short delay
-      setTimeout(() => navigate("/company-selection"), 1000);
-    } else {
-      toast.error(res.data?.message || "Invalid credentials");
+    if (!email.trim()) {
+      toast.error("Please enter your email");
+      return;
     }
-  } catch (error) {
-    toast.error(
-      error.response?.data?.message ||
-        "Something went wrong while logging in"
-    );
-  } finally {
-    setLoading(false);
-  }
-};
 
+    if (!password.trim()) {
+      toast.error("Please enter your password");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const res = await api.post("/auth/login", { email, password });
+      console.log(res);
+
+     if (res?.status === 200)
+{
+        toast.success("Login successful!");
+      
+        navigate("/company-selection")
+          login(res.data.user, res.data.token);
+      
+        
+      } else {
+        toast.error(res.data?.message || "Invalid credentials");
+      }
+    } catch (error) {
+      setTimeout(() => {
+        toast.error(
+        error.response?.data?.message || "Something went wrong while logging in"
+      );
+      }, 2000);
+      
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
@@ -138,8 +141,6 @@ const Login = () => {
                 </button>
               </div>
             </div>
-
-            
 
             {/* Submit Button */}
             <Button

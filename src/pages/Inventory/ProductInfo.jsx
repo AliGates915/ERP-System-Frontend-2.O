@@ -453,6 +453,7 @@ const ProductInfo = () => {
                         <Select
                           value={selectedCategory}
                           onValueChange={setSelectedCategory}
+                         
                         >
                           <SelectTrigger className="bg-muted/50 border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200">
                             <SelectValue placeholder="Select Category" />
@@ -464,7 +465,7 @@ const ProductInfo = () => {
                                 <SelectItem
                                   key={cat._id}
                                   value={cat.categoryName}
-                                  className="hover:bg-primary hover:text-white transition-colors"
+                                  className="hover:bg-blue-600 hover:text-white transition-colors"
                                 >
                                   <div className="flex items-center gap-2">
                                     {cat.logo?.url && (
