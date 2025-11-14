@@ -32,8 +32,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import api from "../../Api/AxiosInstance";
-import CategoryViewDialog from "./Models/CategoryViewModal";
-import Pagination from "../../components//Pagination";
+import CategoryViewDialog from "../Inventory/Models/CategoryViewModal";
+import Pagination from "../../components/Pagination";
 
 const CategoryPage = () => {
   const [searchTerm, setSearchTerm] = useState("");

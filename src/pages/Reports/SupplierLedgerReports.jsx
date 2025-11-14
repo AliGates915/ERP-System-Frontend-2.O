@@ -1,3 +1,5 @@
+
+
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,14 +8,42 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Download, FileText, Table } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 
 const reportData = [
-  { date: "2024-03-01", customer: "Customer A", invoice: "INV-1001", total: 25000, profit: 4500, vat: 4250 },
-  { date: "2024-03-02", customer: "Customer B", invoice: "INV-1002", total: 18000, profit: 3200, vat: 3060 },
-  { date: "2024-03-03", customer: "Customer C", invoice: "INV-1003", total: 32000, profit: 5800, vat: 5440 },
+  {
+    date: "2024-03-01",
+    customer: "Customer A",
+    invoice: "INV-1001",
+    total: 25000,
+    profit: 4500,
+    vat: 4250,
+  },
+  {
+    date: "2024-03-02",
+    customer: "Customer B",
+    invoice: "INV-1002",
+    total: 18000,
+    profit: 3200,
+    vat: 3060,
+  },
+  {
+    date: "2024-03-03",
+    customer: "Customer C",
+    invoice: "INV-1003",
+    total: 32000,
+    profit: 5800,
+    vat: 5440,
+  },
 ];
 
-const Reports = () => {
+const SupplierLedgerReports = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -30,7 +60,9 @@ const Reports = () => {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Reports & Analytics</h1>
-          <p className="text-muted-foreground">Generate and export business reports</p>
+          <p className="text-muted-foreground">
+            Generate and export business reports
+          </p>
         </div>
 
         {/* Filters */}
@@ -56,48 +88,31 @@ const Reports = () => {
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </div>
+            {/*  */}
+
               <div className="space-y-2">
-                <Label>Customer</Label>
-                <Input placeholder="All customers" />
-              </div>
-              <div className="space-y-2">
-                <Label>Category</Label>
-                <Input placeholder="All categories" />
+                <Label>Supplier</Label>
+                <Select onValueChange={(v) => setSelectedSupplier(v)}>
+                  <SelectTrigger className="border-2">
+                    <SelectValue placeholder="Select supplier" />
+                  </SelectTrigger>
+
+                  <SelectContent>
+                    <SelectItem value="supplier001">ABC Traders</SelectItem>
+                    <SelectItem value="supplier002">
+                      Global Suppliers
+                    </SelectItem>
+                    <SelectItem value="supplier003">
+                      Premium Goods Ltd
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Summary Cards */}
-        <div className="grid md:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Sales</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">PKR 75,000</div>
-              <p className="text-xs text-success mt-1">+12.5% from last period</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Profit</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">PKR 13,500</div>
-              <p className="text-xs text-success mt-1">+8.3% from last period</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total VAT</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">PKR 12,750</div>
-              <p className="text-xs text-muted-foreground mt-1">17% margin applied</p>
-            </CardContent>
-          </Card>
-        </div>
+        
 
         {/* Report Table */}
         <Card>
@@ -119,12 +134,24 @@ const Reports = () => {
               <table className="w-full">
                 <thead className="bg-muted/50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Date</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Customer</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Invoice</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Total</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Profit</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">VAT</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">
+                      Date
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">
+                      Customer
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">
+                      Invoice
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">
+                      Total
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">
+                      Profit
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">
+                      VAT
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -132,16 +159,26 @@ const Reports = () => {
                     <tr key={i} className="hover:bg-muted/30">
                       <td className="px-4 py-3 text-sm">{row.date}</td>
                       <td className="px-4 py-3">{row.customer}</td>
-                      <td className="px-4 py-3 font-mono text-sm">{row.invoice}</td>
-                      <td className="px-4 py-3 font-medium">PKR {row.total.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-success">PKR {row.profit.toLocaleString()}</td>
-                      <td className="px-4 py-3">PKR {row.vat.toLocaleString()}</td>
+                      <td className="px-4 py-3 font-mono text-sm">
+                        {row.invoice}
+                      </td>
+                      <td className="px-4 py-3 font-medium">
+                        PKR {row.total.toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 text-success">
+                        PKR {row.profit.toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3">
+                        PKR {row.vat.toLocaleString()}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot className="bg-muted/30 font-semibold">
                   <tr>
-                    <td colSpan={3} className="px-4 py-3 text-right">Total:</td>
+                    <td colSpan={3} className="px-4 py-3 text-right">
+                      Total:
+                    </td>
                     <td className="px-4 py-3">PKR 75,000</td>
                     <td className="px-4 py-3">PKR 13,500</td>
                     <td className="px-4 py-3">PKR 12,750</td>
@@ -156,4 +193,4 @@ const Reports = () => {
   );
 };
 
-export default Reports;
+export default SupplierLedgerReports;

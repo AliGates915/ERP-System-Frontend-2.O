@@ -442,7 +442,7 @@ const StockPurchaseDetails = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
-              Stock & Purchase Details
+              Stock & Purchase (Purchase Invoice)
             </h1>
             <p className="text-muted-foreground mt-2 flex items-center gap-2">
               <Package className="w-4 h-4" />
@@ -479,7 +479,7 @@ const StockPurchaseDetails = () => {
                 >
                   <Button className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200">
                     <Plus className="w-4 h-4 mr-2" />
-                    Add Stock Entry
+                    Add Stock & Purchase
                   </Button>
                 </DialogTrigger>
               )}
@@ -490,7 +490,7 @@ const StockPurchaseDetails = () => {
                     <Plus className="w-5 h-5 text-primary" />
                     {isEditMode
                       ? "Edit Stock & Purchase Details"
-                      : "Add Stock & Purchase Details"}
+                      : "Add Stock & Purchase (Purchase Invoice)"}
                   </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-6 pt-4">

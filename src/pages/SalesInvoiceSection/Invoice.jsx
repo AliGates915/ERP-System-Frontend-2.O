@@ -52,7 +52,7 @@ import html2canvas from "html2canvas";
 import InvoicePDFTemplate from "../../components/InvoicePDFTemplate";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../Api/AxiosInstance";
-import InvoiceViewModal from "./Models/InvoiceViewModal";
+import InvoiceViewModal from "../Inventory/Models/InvoiceViewModal";
 
 const Invoice = () => {
   const [exporting, setExporting] = useState(false);
@@ -60,6 +60,7 @@ const Invoice = () => {
   const [customerList, setCustomerList] = useState([]);
   const [customerLoading, setCustomerLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [activeTab, setActiveTab] = useState("all"); // "all", "draft", "final"
   const itemsPerPage = 8; // adjust per your need
 
   const [invoiceDate, setInvoiceDate] = useState(
@@ -84,6 +85,8 @@ const Invoice = () => {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [invoiceData, setInvoiceData] = useState([]);
+  const [draftInvoices, setDraftInvoices] = useState([]);
+  const [finalInvoices, setFinalInvoices] = useState([]);
   const [summary, setSummary] = useState({
     totalInvoices: 0,
     totalAmountExclVAT: 0,
@@ -171,7 +174,15 @@ const Invoice = () => {
       });
 
       if (res.data.success) {
-        setInvoiceData(res.data.data || []);
+        const allInvoices = res.data.data || [];
+        setInvoiceData(allInvoices);
+        
+        // Split into draft and final invoices (you might need to adjust this logic based on your API response)
+        const drafts = allInvoices.filter(inv => inv.status === 'draft' || !inv.status);
+        const finals = allInvoices.filter(inv => inv.status === 'final');
+        
+        setDraftInvoices(drafts);
+        setFinalInvoices(finals);
         setSummary(res.data.summary || {});
       } else {
         toast.error("Failed to fetch invoices");
@@ -256,6 +267,7 @@ const Invoice = () => {
       totalExclVAT: inv.netTotal,
       vatAmount: inv.vatTotal,
       totalInclVAT: inv.grandTotal,
+      status: inv.status || 'draft' // Add status for filtering
     }))
     .filter(
       (invoice) =>
@@ -265,9 +277,78 @@ const Invoice = () => {
         invoice.invoiceNo?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentInvoices = filteredInvoice.slice(startIndex, endIndex);
+  const filteredDrafts = draftInvoices
+    .map((inv) => ({
+      _id: inv._id,
+      invoiceNo: inv.invoiceNo,
+      date: new Date(inv.invoiceDate).toLocaleDateString(),
+      customerName: inv.customer?.customerName || inv.customerName,
+      phoneNumber: inv.customer?.phoneNumber,
+      description: inv.items?.[0]?.description || "-",
+      quantity: inv.items?.[0]?.quantity || 0,
+      unit: inv?.items[0].unitPrice,
+      vatRate: (inv.items?.[0]?.vatRate || 0) * 100,
+      totalExclVAT: inv.netTotal,
+      vatAmount: inv.vatTotal,
+      totalInclVAT: inv.grandTotal,
+      status: 'draft'
+    }))
+    .filter(
+      (invoice) =>
+        invoice.customerName
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        invoice.invoiceNo?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+  const filteredFinals = finalInvoices
+    .map((inv) => ({
+      _id: inv._id,
+      invoiceNo: inv.invoiceNo,
+      date: new Date(inv.invoiceDate).toLocaleDateString(),
+      customerName: inv.customer?.customerName || inv.customerName,
+      phoneNumber: inv.customer?.phoneNumber,
+      description: inv.items?.[0]?.description || "-",
+      quantity: inv.items?.[0]?.quantity || 0,
+      unit: inv?.items[0].unitPrice,
+      vatRate: (inv.items?.[0]?.vatRate || 0) * 100,
+      totalExclVAT: inv.netTotal,
+      vatAmount: inv.vatTotal,
+      totalInclVAT: inv.grandTotal,
+      status: 'final'
+    }))
+    .filter(
+      (invoice) =>
+        invoice.customerName
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        invoice.invoiceNo?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+  // Get current invoices based on active tab
+  const getCurrentInvoices = () => {
+    let invoicesToShow = [];
+    if (activeTab === "all") {
+      invoicesToShow = filteredInvoice;
+    } else if (activeTab === "draft") {
+      invoicesToShow = filteredDrafts;
+    } else if (activeTab === "final") {
+      invoicesToShow = filteredFinals;
+    }
+    
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return invoicesToShow.slice(startIndex, endIndex);
+  };
+
+  const getTotalItems = () => {
+    if (activeTab === "all") return filteredInvoice.length;
+    if (activeTab === "draft") return filteredDrafts.length;
+    if (activeTab === "final") return filteredFinals.length;
+    return 0;
+  };
+
+  const currentInvoices = getCurrentInvoices();
 
   const handleSaveInvoice = () => {
     toast.success("Invoice saved successfully!");
@@ -351,8 +432,14 @@ const Invoice = () => {
   };
 
   const handleView = (invoiceNo) => {
-    const invoice = invoiceData.find((inv) => inv.invoiceNo === invoiceNo);
-    // console.log({invoice});
+    let invoice;
+    if (activeTab === "all") {
+      invoice = invoiceData.find((inv) => inv.invoiceNo === invoiceNo);
+    } else if (activeTab === "draft") {
+      invoice = draftInvoices.find((inv) => inv.invoiceNo === invoiceNo);
+    } else if (activeTab === "final") {
+      invoice = finalInvoices.find((inv) => inv.invoiceNo === invoiceNo);
+    }
 
     if (!invoice) {
       toast.error("Invoice not found!");
@@ -362,8 +449,6 @@ const Invoice = () => {
     setIsViewOpen(true);
   };
   const handleSendOption = async (type, invoice) => {
-    // console.log(invoice);
-
     if (!invoice) {
       toast.error("No invoice selected");
       return;
@@ -809,12 +894,46 @@ const Invoice = () => {
                 <FileText className="w-5 h-5 text-primary" />
                 Invoice Items
               </CardTitle>
-              <Badge
-                variant="secondary"
-                className="bg-primary/10 text-primary border-primary/20"
-              >
-                {filteredInvoice.length} items
-              </Badge>
+              <div className="flex items-center gap-4">
+                <div className="flex gap-2">
+                  <Button
+                    variant={activeTab === "all" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      setActiveTab("all");
+                      setCurrentPage(1);
+                    }}
+                  >
+                    All
+                  </Button>
+                  <Button
+                    variant={activeTab === "draft" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      setActiveTab("draft");
+                      setCurrentPage(1);
+                    }}
+                  >
+                    Draft
+                  </Button>
+                  <Button
+                    variant={activeTab === "final" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      setActiveTab("final");
+                      setCurrentPage(1);
+                    }}
+                  >
+                    Final
+                  </Button>
+                </div>
+                <Badge
+                  variant="secondary"
+                  className="bg-primary/10 text-primary border-primary/20"
+                >
+                  {getTotalItems()} items
+                </Badge>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -864,14 +983,14 @@ const Invoice = () => {
                         </div>
                       </td>
                     </tr>
-                  ) : filteredInvoice.length > 0 ? (
+                  ) : currentInvoices.length > 0 ? (
                     currentInvoices.map((item, i) => (
                       <tr
                         key={item._id || i}
                         className="group hover:bg-primary/5 transition-all duration-300"
                       >
                         <td className="px-6 py-4 font-semibold">
-                          {startIndex + i + 1}
+                          {(currentPage - 1) * itemsPerPage + i + 1}
                         </td>
 
                         <td className="px-6 py-4">
@@ -896,84 +1015,141 @@ const Invoice = () => {
                         </td>
 
                         <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
-                          <div className="flex items-center ">
-                            {/* ✉️ Send Dropdown */}
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
+                          <div className="flex items-center justify-center">
+                            {/* Show different actions based on tab */}
+                            {activeTab === "draft" && (
+                              <>
+                                {/* 👁 View */}
                                 <Button
-                                  variant="none"
+                                  variant="ghost"
                                   size="sm"
-                                  className="flex items-center  text-gray-700"
+                                  className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                                  title="View"
+                                  onClick={() => handleView(item.invoiceNo)}
                                 >
-                                  {sendingEmail ? (
-                                    <Loader className="w-4 h-4 text-primary animate-spin" />
-                                  ) : (
-                                    <Send className="w-4 h-4 text-primary" />
-                                  )}
+                                  <Eye className="w-4 h-4" />
                                 </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-40">
-                                <DropdownMenuItem
-                                  className="flex items-center gap-2 cursor-pointer"
-                                  onClick={() =>
-                                    handleSendOption("whatsapp", item)
-                                  }
+
+                                {/* ✏️ Edit */}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                                  title="Edit"
                                 >
-                                  <MessageCircle className="w-4 h-4 text-green-600" />
-                                  <span>WhatsApp</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  className="flex items-center gap-2 cursor-pointer"
-                                  onClick={() =>
-                                    handleSendOption("email", item)
-                                  }
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+
+                                {/* 🗑 Delete */}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                                  title="Delete"
                                 >
-                                  <Mail className="w-4 h-4 text-blue-600" />
-                                  <span>Email</span>
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                            {/* 👁 View */}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
-                              title="View"
-                              onClick={() => handleView(item.invoiceNo)}
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </>
+                            )}
 
-                            {/* ✏️ Edit */}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
-                              title="Edit"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
+                            {activeTab === "final" && (
+                              <>
+                                {/* 👁 View */}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                                  title="View"
+                                  onClick={() => handleView(item.invoiceNo)}
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </Button>
 
-                            {/* 🗑 Delete */}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                                {/* ✉️ Share Dropdown */}
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                                      title="Share"
+                                    >
+                                      {sendingEmail ? (
+                                        <Loader className="w-4 h-4 text-primary animate-spin" />
+                                      ) : (
+                                        <Send className="w-4 h-4" />
+                                      )}
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-40">
+                                    <DropdownMenuItem
+                                      className="flex items-center gap-2 cursor-pointer"
+                                      onClick={() =>
+                                        handleSendOption("whatsapp", item)
+                                      }
+                                    >
+                                      <MessageCircle className="w-4 h-4 text-green-600" />
+                                      <span>WhatsApp</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      className="flex items-center gap-2 cursor-pointer"
+                                      onClick={() =>
+                                        handleSendOption("email", item)
+                                      }
+                                    >
+                                      <Mail className="w-4 h-4 text-blue-600" />
+                                      <span>Email</span>
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </>
+                            )}
 
-                            {/* 📥 Download */}
-                            <Button
-                              onClick={() => handleDownload(item)}
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
-                              title="Download"
-                            >
-                              <DownloadIcon className="w-4 h-4" />
-                            </Button>
+                            {activeTab === "all" && (
+                              <>
+                                {/* 👁 View */}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                                  title="View"
+                                  onClick={() => handleView(item.invoiceNo)}
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+
+                                {/* ✏️ Edit */}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                                  title="Edit"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+
+                                {/* 🗑 Delete */}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+
+                                {/* 📥 Download */}
+                                <Button
+                                  onClick={() => handleDownload(item)}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                                  title="Download"
+                                >
+                                  <DownloadIcon className="w-4 h-4" />
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -984,7 +1160,7 @@ const Invoice = () => {
                         <div className="flex flex-col items-center justify-center">
                           <Info className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
                           <p className="text-muted-foreground font-medium text-lg">
-                            No invoice items found
+                            No {activeTab} invoice items found
                           </p>
                           <p className="text-sm text-muted-foreground mt-2">
                             Try adjusting your search term or create a new
@@ -998,7 +1174,7 @@ const Invoice = () => {
               </table>
               <Pagination
                 currentPage={currentPage}
-                totalItems={filteredInvoice.length}
+                totalItems={getTotalItems()}
                 itemsPerPage={itemsPerPage}
                 onPageChange={setCurrentPage}
               />

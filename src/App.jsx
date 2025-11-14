@@ -11,7 +11,6 @@ import Sales from "./pages/Sales";
 import Consignment from "./pages/Consignment";
 import Barcode from "./pages/Barcode";
 import Communication from "./pages/Communication";
-import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 import WareHouse from "./pages/Inventory/WareHouse";
 import Signup from "./pages/SignUpPage";
@@ -23,14 +22,17 @@ import SupplierInformation from "./pages/Inventory/SupplierInformation";
 import SalesHistory from "./pages/Inventory/SalesHistory";
 import TransactionTracking from "./pages/Inventory/TransactionTracking";
 import CustomerDefination from "./pages/Inventory/CustomerDefination";
-import CategoryFields from "./pages/Inventory/CategoryFields";
+import CategoryFields from "./pages/Setup/CategoryFields";
 // Company Management Pages
 import ManageCompanies from "./pages/CompanyManagement/ManageCompanies";
 import CompanySwitcher from "./pages/CompanyManagement/CompanySwitcher";
 import CreateCompanyForm from "./pages/CompanyManagement/CreateCompanyForm";
 import RoleAccessSettings from "./pages/CompanyManagement/RoleAccessSettings";
-import Invoice from "./pages/Inventory/Invoice";
+import Invoice from "./pages/SalesInvoiceSection/Invoice";
 import ProtectedRoute from "./context/ProtectedRoute";
+import DrafTrack from "./pages/Inventory/DrafTrack";
+import CustomerLedgerReport from "./pages/Reports/CustomerLedgerReport";
+import SupplierLedgerReports from "./pages/Reports/SupplierLedgerReports";
 
 const queryClient = new QueryClient();
 
@@ -92,12 +94,19 @@ const App = () => (
             path="/inventory/stock-purchase"
             element={<StockPurchaseDetails />}
           />
+            <Route
+            path="/inventory/draft-track"
+            element={<DrafTrack />}
+          />
 
           {/* Other Modules */}
           <Route path="/consignment" element={<Consignment />} />
           <Route path="/barcode" element={<Barcode />} />
           <Route path="/communication" element={<Communication />} />
-          <Route path="/reports" element={<Reports />} />
+
+          {/* Reports */}
+          <Route path="/reports/customer-ledger" element={<CustomerLedgerReport />} />
+          <Route path="/reports/supplier-ledger" element={<SupplierLedgerReports />} />
 
           {/* Company Management */}
           <Route
