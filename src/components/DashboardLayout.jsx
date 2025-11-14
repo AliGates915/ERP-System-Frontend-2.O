@@ -25,11 +25,10 @@ import {
   Warehouse,
   Briefcase,
   Key,
-
   Tag,
-NotepadTextDashed ,
-  FileSpreadsheet ,
-BookOpenText 
+  NotepadTextDashed,
+  FileSpreadsheet,
+  BookOpenText,
 } from "lucide-react";
 import { ClipboardList, ArrowRightLeft } from "lucide-react";
 
@@ -52,10 +51,8 @@ const parentMap = {
   "/reports": "Reports",
 };
 
-
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-
 
   // -------------------------------
   // INVENTORY MODULE
@@ -66,8 +63,16 @@ const navigation = [
     icon: Package,
     subNav: [
       { name: "Product", href: "/inventory/productinfo", icon: Box },
-      { name: "Stock & Purchase", href: "/inventory/stock-purchase", icon: ShoppingBag },
-      { name: "Draft Track", href: "/inventory/draft-track", icon: NotepadTextDashed },
+      {
+        name: "Stock & Purchase",
+        href: "/inventory/stock-purchase",
+        icon: ShoppingBag,
+      },
+      {
+        name: "Draft Track",
+        href: "/inventory/draft-track",
+        icon: NotepadTextDashed,
+      },
     ],
   },
 
@@ -80,12 +85,20 @@ const navigation = [
     icon: ShoppingCart,
     subNav: [
       { name: "Sales Invoice", href: "/sales/invoice", icon: FileSpreadsheet },
-      { name: "Sales History", href: "/sales/sales-history", icon: ClipboardList },
-      { name: "Transaction Traking", href: "/sales/transaction-traking", icon: ArrowRightLeft },
+      {
+        name: "Sales History",
+        href: "/sales/sales-history",
+        icon: ClipboardList,
+      },
+      {
+        name: "Transaction Traking",
+        href: "/sales/transaction-traking",
+        icon: ArrowRightLeft,
+      },
     ],
   },
 
-   // -------------------------------
+  // -------------------------------
   // SETUP MODULE (MASTER DATA)
   // -------------------------------
   {
@@ -93,8 +106,16 @@ const navigation = [
     href: "/setup",
     icon: Briefcase,
     subNav: [
-      { name: "Customer Defination", href: "/setup/customer-defination", icon: User },
-      { name: "Supplier Information", href: "/setup/supplier-information", icon: Container },
+      {
+        name: "Customer Defination",
+        href: "/setup/customer-defination",
+        icon: User,
+      },
+      {
+        name: "Supplier Information",
+        href: "/setup/supplier-information",
+        icon: Container,
+      },
       { name: "WareHouse", href: "/setup/warehouse", icon: Warehouse },
       { name: "Category", href: "/setup/category-fields", icon: Tag },
     ],
@@ -108,9 +129,21 @@ const navigation = [
     href: "/company-management",
     icon: Briefcase,
     subNav: [
-      { name: "Manage Companies", href: "/company-management/manage-companies", icon: Edit },
-      { name: "Company Switcher", href: "/company-management/company-switcher", icon: Building2 },
-      { name: "Role Access", href: "/company-management/role-access-settings", icon: Key },
+      {
+        name: "Manage Companies",
+        href: "/company-management/manage-companies",
+        icon: Edit,
+      },
+      {
+        name: "Company Switcher",
+        href: "/company-management/company-switcher",
+        icon: Building2,
+      },
+      {
+        name: "Role Access",
+        href: "/company-management/role-access-settings",
+        icon: Key,
+      },
     ],
   },
 
@@ -120,43 +153,53 @@ const navigation = [
   { name: "User Management", href: "/user-manegement", icon: User },
   { name: "Barcode", href: "/barcode", icon: Barcode },
   { name: "Communication", href: "/communication", icon: MessageSquare },
-   {
+  {
     name: "Reports",
     href: "/reports",
     icon: FileText,
     subNav: [
-      { name: "Customer Ledger", href: "/reports/customer-ledger", icon: BookOpenText   },
-      { name: "Supplier Ledger", href: "/reports/supplier-ledger", icon: BookOpenText  },
-     
+      {
+        name: "Customer Ledger",
+        href: "/reports/customer-ledger",
+        icon: BookOpenText,
+      },
+      {
+        name: "Supplier Ledger",
+        href: "/reports/supplier-ledger",
+        icon: BookOpenText,
+      },
     ],
   },
 ];
-
 
 const DashboardLayout = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openSubNav, setOpenSubNav] = useState({});
-const { logout } = useAuth();
+  const { logout } = useAuth();
 
-  const selectedCompany = JSON.parse(localStorage.getItem("selectedCompany") || "{}");
+  const selectedCompany = JSON.parse(
+    localStorage.getItem("selectedCompany") || "{}"
+  );
   const isInventoryActive = location.pathname.startsWith("/inventory");
-  const isCompanyManagementActive = location.pathname.startsWith("/company-management");
-
-useEffect(() => {
-  // find which parent menu matches the current route
-  const matchedParent = Object.keys(parentMap).find((key) =>
-    location.pathname.startsWith(key)
+  const isCompanyManagementActive = location.pathname.startsWith(
+    "/company-management"
   );
 
-  if (matchedParent) {
-    setOpenSubNav((prev) => ({
-      ...prev,
-      [parentMap[matchedParent]]: true,
-    }));
-  }
-}, [location.pathname]);
+  useEffect(() => {
+    // find which parent menu matches the current route
+    const matchedParent = Object.keys(parentMap).find((key) =>
+      location.pathname.startsWith(key)
+    );
+
+    if (matchedParent) {
+      setOpenSubNav((prev) => ({
+        ...prev,
+        [parentMap[matchedParent]]: true,
+      }));
+    }
+  }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -176,7 +219,11 @@ useEffect(() => {
               className="lg:hidden"
               onClick={() => setSidebarOpen(!sidebarOpen)}
             >
-              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {sidebarOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
             </Button>
             <div className="flex items-center gap-2">
               <Building2 className="w-6 h-6 text-primary" />
@@ -219,7 +266,9 @@ useEffect(() => {
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate("/company-selection")}>
+                <DropdownMenuItem
+                  onClick={() => navigate("/company-selection")}
+                >
                   <Building2 className="w-4 h-4 mr-2" /> Switch Company
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLogout}>
@@ -235,7 +284,7 @@ useEffect(() => {
         {/* Sidebar */}
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-30 w-64 bg-sidebar border-r border-sidebar-border transition-transform duration-200 lg:translate-x-0 top-16",
+            "fixed inset-y-0 left-0 z-30 w-64 bg-sidebar border-r border-sidebar-border transition-transform duration-200 lg:translate-x-0 overflow-y-auto scrollbar-thin scrollbar-thumb-white/30 scrollbar-track-transparent top-16",
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           )}
         >
@@ -270,7 +319,11 @@ useEffect(() => {
                       {item.name}
                     </div>
                     {item.subNav &&
-                      (isSubOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />)}
+                      (isSubOpen ? (
+                        <ChevronDown className="w-4 h-4" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4" />
+                      ))}
                   </div>
 
                   {/* Child links */}
@@ -284,7 +337,9 @@ useEffect(() => {
                           className={({ isActive }) =>
                             cn(
                               "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                              isActive ? "bg-[#36BFFA] text-white" : "text-sidebar-foreground hover:bg-sidebar-ring"
+                              isActive
+                                ? "bg-[#36BFFA] text-white"
+                                : "text-sidebar-foreground hover:bg-sidebar-ring"
                             )
                           }
                         >
@@ -297,12 +352,13 @@ useEffect(() => {
                 </div>
               );
             })}
-
           </nav>
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 lg:ml-64 p-6  h-screen overflow-x-auto max-w-full">{children}</main>
+        <main className="flex-1 lg:ml-64 p-6  h-screen overflow-x-auto max-w-full">
+          {children}
+        </main>
       </div>
 
       {/* Mobile Overlay */}

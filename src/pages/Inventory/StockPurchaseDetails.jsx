@@ -44,9 +44,13 @@ import Pagination from "../../components/Pagination";
 
 const StockPurchaseDetails = () => {
   const [purchaseNo, setPurchaseNo] = useState("");
+  const [activeTab, setActiveTab] = useState("all");
+
   const [purchaseDate, setPurchaseDate] = useState(
     new Date().toISOString().split("T")[0]
   );
+  const [suppliers, setSuppliers] = useState([]);
+  const [supplierLoading, setSupplierLoading] = useState(false);
   const [supplier, setSupplier] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [itemId, setItemId] = useState("");
@@ -63,7 +67,7 @@ const StockPurchaseDetails = () => {
     lowStockItems: 0,
     storesInConsignment: 0,
   });
-  // const [itemNames, setItemNames] = useState([]);
+  const [itemNames, setItemNames] = useState([]);
   const [itemNameLoading, setItemNameLoading] = useState(false);
   const [selectedItem, setSelectedItem] = useState("");
   const [warehouses, setWarehouses] = useState([]);
@@ -84,22 +88,15 @@ const StockPurchaseDetails = () => {
   const [minStockLevel, setMinStockLevel] = useState("");
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState(null);
-  const itemNames = [
-    { id: "1", name: "Good Lotion" },
-    { id: "2", name: "Face Cream" },
-    { id: "3", name: "Body Spray" },
-    { id: "4", name: "Shampoo" },
-    { id: "5", name: "Hair Oil" },
-  ];
 
   const { token } = useAuth();
   const handleAddPurchaseItem = () => {
-    if (!itemId || !quantity || !unitCost) {
-      toast.error("Please fill all required fields");
+    if (!itemId || !quantity || !unitCost || !barcode || !description) {
+      toast.error("Please fill all Items required fields");
       return;
     }
 
-    const selectedItemName = itemNames.find((x) => x.id === itemId)?.name;
+    const selectedItemName = itemNames.find((x) => x._id === itemId)?.itemName;
 
     const newItem = {
       itemId,
@@ -123,50 +120,68 @@ const StockPurchaseDetails = () => {
   const fetchStock = async () => {
     try {
       setLoading(true);
-      const res = await api.get("/inventory/items/stock");
+
+      let endpoint = "/inventory/purchases";
+
+      if (activeTab === "pending") {
+        endpoint = "/inventory/purchases?status=Pending";
+      } else if (activeTab === "received") {
+        endpoint = "/inventory/purchases?status=Received";
+      }
+
+      const res = await api.get(endpoint, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       if (res.data.success) {
         setStockData(res.data.data);
-        if (res.data.summary) {
-          setSummary(res.data.summary);
-        }
+        setSummary(res.data.summary || {});
       } else {
-        toast.error("Failed to fetch inventory data");
+        toast.error("Failed to fetch purchase stock");
       }
     } catch (error) {
-      console.error("Error fetching inventory:", error);
       toast.error("Error fetching stock data");
     } finally {
-      setTimeout(() => setLoading(false), 1000);
+      setTimeout(() => setLoading(false), 500);
     }
   };
 
   useEffect(() => {
     fetchStock();
   }, []);
-  // fetch item name
-  // console.log(stockData, "data");
+  useEffect(() => {
+    fetchStock();
+  }, [activeTab]);
 
-  // const fetchItemNames = async () => {
-  //   try {
-  //     setItemNameLoading(true);
-  //     const res = await api.get("/inventory/items/name");
-  //     if (res.data.success) {
-  //       setItemNames(res.data.data);
-  //     } else {
-  //       toast.error("Failed to fetch item names");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error fetching item names:", error);
-  //     toast.error("Error fetching item names");
-  //   } finally {
-  //     setTimeout(() => setItemNameLoading(false), 500);
-  //   }
-  // };
+  // fetch item name
+  const fetchItemNames = async () => {
+    try {
+      setItemNameLoading(true);
+
+      // NEW API ENDPOINT
+      const res = await api.get("/inventory/items");
+
+      if (res.data.success) {
+        // res.data.data = array of items
+        setItemNames(res.data.data);
+      } else {
+        toast.error("Failed to fetch item names");
+      }
+    } catch (error) {
+      console.error("Error fetching item names:", error);
+      toast.error("Error fetching item names");
+    } finally {
+      setTimeout(() => setItemNameLoading(false), 500);
+    }
+  };
 
   const fetchWarehouses = async () => {
     try {
       setWarehouseLoading(true);
-      const res = await api.get("/warehouses/name");
+      const res = await api.get("/warehouses");
+
       if (res.data.success) {
         setWarehouses(res.data.data);
       } else {
@@ -180,22 +195,67 @@ const StockPurchaseDetails = () => {
     }
   };
 
+  const fetchSuppliers = async () => {
+    try {
+      setSupplierLoading(true);
+      const res = await api.get("/suppliers");
+
+      if (res.data.success) {
+        setSuppliers(res.data.data);
+      } else {
+        toast.error("Failed to fetch suppliers");
+      }
+    } catch (error) {
+      console.error("Error fetching suppliers:", error);
+      toast.error("Error fetching suppliers");
+    } finally {
+      setTimeout(() => setSupplierLoading(false), 500);
+    }
+  };
+
   useEffect(() => {
     if (isAddOpen) {
       fetchWarehouses();
+      fetchSuppliers();
+      fetchItemNames(); // <-- REUSE YOUR OLD FUNCTION
     }
   }, [isAddOpen]);
+  // select item name auto select decription
+  useEffect(() => {
+    if (itemId) {
+      const item = itemNames.find((i) => i._id === itemId);
+      if (item) {
+        setDescription(item.description || "");
+      }
+    }
+  }, [itemId, itemNames]);
 
-  // item name useeffect call first time
-  // useEffect(() => {
-  //   fetchItemNames();
-  // }, []);
+  // Auto-generate Purchase No based on highest existing number
+  useEffect(() => {
+    if (!isEditMode) {
+      if (stockData.length > 0) {
+        const maxNo = Math.max(
+          ...stockData.map((p) => {
+            const match = p.purchaseNo?.match(/PUR-(\d+)/);
+            return match ? parseInt(match[1], 10) : 0;
+          })
+        );
+
+        setPurchaseNo(`PUR-${(maxNo + 1).toString().padStart(3, "0")}`);
+      } else {
+        setPurchaseNo("PUR-001");
+      }
+    }
+  }, [stockData, isAddOpen, isEditMode]);
 
   const filteredStock = stockData.filter(
-    (item) =>
-      item.itemName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.itemCode?.toLowerCase().includes(searchTerm.toLowerCase())
+    (p) =>
+      p.purchaseNo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p?.supplier?.supplierName
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase())
   );
+
   // --- Calculate paginated data ---
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -204,14 +264,13 @@ const StockPurchaseDetails = () => {
   // ✅ Fields visibility state
   const [visibleFields, setVisibleFields] = useState([
     "sr",
-    "itemCode",
-    "itemName",
-    "openingStock",
-    "purchaseRate",
-    "sellingPrice",
-    "wholesalePrice",
-    "location",
-    "minStock",
+    "purchaseNo",
+    "supplier",
+    "purchaseDate",
+    "trackingNumber",
+    "status",
+    "grandTotal",
+    "warehouse",
     "actions",
   ]);
 
@@ -241,59 +300,58 @@ const StockPurchaseDetails = () => {
     try {
       setSaving(true);
 
-      // 🧩 Validation
-      if (
-        !selectedItem ||
-        !selectedWarehouse ||
-        !openingStock ||
-        !purchaseRate ||
-        !sellingPrice ||
-        !wholesalePrice ||
-        !minStockLevel
-      ) {
-        toast.error("All fields are required before saving!");
+      // 🧩 Individual field validation
+      if (!purchaseNo.trim()) {
+        toast.error("Purchase Number is required");
         return;
       }
 
-      let itemId;
+      if (!purchaseDate) {
+        toast.error("Purchase Date is required");
+        return;
+      }
 
-      // 🧩 If adding new stock → find item ID
-      if (!isEditMode) {
-        const item = itemNames.find((i) => i.itemName === selectedItem);
-        if (!item?._id) {
-          toast.error("Invalid item selected!");
-          return;
-        }
-        itemId = item._id;
-      } else {
-        // 🧩 If editing → use existing stock ID
-        itemId = editStockId;
+      if (!supplier) {
+        toast.error("Supplier is required");
+        return;
+      }
+
+      if (!selectedWarehouse) {
+        toast.error("Warehouse is required");
+        return;
+      }
+
+      if (!trackingNumber.trim()) {
+        toast.error("Tracking Number is required");
+        return;
+      }
+
+      if (purchaseItems.length === 0) {
+        toast.error("Please add at least one item");
+        return;
       }
 
       // 🧩 Find warehouse ID
-      const warehouse = warehouses.find(
-        (w) => w.warehouseName === selectedWarehouse
-      );
+      const warehouse = warehouses.find((w) => w._id === selectedWarehouse);
       if (!warehouse?._id) {
         toast.error("Invalid warehouse selected!");
         return;
       }
 
-      // const payload = {
-      //   openingStock: Number(openingStock),
-      //   purchaseRate: Number(purchaseRate),
-      //   sellingPrice: Number(sellingPrice),
-      //   wholesalePrice: Number(wholesalePrice),
-      //   warehouseId: warehouse._id,
-      //   minStockLevel: Number(minStockLevel),
-      // };
+      // 🧩 Build payload EXACT like Postman
       const payload = {
         purchaseNo,
         purchaseDate,
-        supplier,
+        supplier, // supplierId
         warehouse: warehouse._id,
         trackingNumber,
-        items: purchaseItems,
+        items: purchaseItems.map((it) => ({
+          itemId: it.itemId,
+          description: it.description,
+          quantity: it.quantity,
+          unitCost: it.unitCost,
+          barcode: it.barcode,
+        })),
 
         netTotal: purchaseItems.reduce(
           (sum, i) => sum + i.quantity * i.unitCost,
@@ -306,36 +364,31 @@ const StockPurchaseDetails = () => {
         ),
       };
 
-      // 🧩 Single unified API call
-      const res = await api.put(`/inventory/items/stock/${itemId}`, payload, {
+      // 🧩 Correct API (PURCHASE INVOICE)
+      const res = await api.post(`/inventory/purchases`, payload, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
       if (res.data.success) {
-        toast.success("Stock details updated successfully!");
+        toast.success("Purchase added successfully!");
         fetchStock();
         setIsAddOpen(false);
 
-        // Reset form
-        setSelectedItem("");
+        // Reset
+        setPurchaseItems([]);
+        setPurchaseNo("");
+        setTrackingNumber("");
+        setSupplier("");
         setSelectedWarehouse("");
-        setOpeningStock("");
-        setPurchaseRate("");
-        setSellingPrice("");
-        setWholesalePrice("");
-        setMinStockLevel("");
-        setIsEditMode(false);
-        setEditStockId(null);
+        setPurchaseDate(new Date().toISOString().split("T")[0]);
       } else {
-        toast.error(res.data.message || "Failed to update stock");
+        toast.error(res.data.message || "Failed to add purchase");
       }
     } catch (error) {
-      toast.dismiss();
-      console.error("Error updating stock:", error);
       toast.error(
-        error.response?.data?.message || "Server error while updating stock"
+        error.response?.data?.message || "Server error while saving purchase"
       );
     } finally {
       setSaving(false);
@@ -459,30 +512,28 @@ const StockPurchaseDetails = () => {
               Export Report
             </Button>
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-              {itemNames.length > 0 && (
-                <DialogTrigger
-                  onClick={() => {
-                    // 🧠 Reset edit mode whenever adding new entry
-                    setIsEditMode(false);
-                    setEditStockId(null);
+              <DialogTrigger
+                onClick={() => {
+                  // 🧠 Reset edit mode whenever adding new entry
+                  setIsEditMode(false);
+                  setEditStockId(null);
 
-                    // 🧼 Optional — clear input fields
-                    setSelectedItem("");
-                    setSelectedWarehouse("");
-                    setOpeningStock("");
-                    setPurchaseRate("");
-                    setSellingPrice("");
-                    setWholesalePrice("");
-                    setMinStockLevel("");
-                  }}
-                  asChild
-                >
-                  <Button className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Stock & Purchase
-                  </Button>
-                </DialogTrigger>
-              )}
+                  // 🧼 Optional — clear input fields
+                  setSelectedItem("");
+                  setSelectedWarehouse("");
+                  setOpeningStock("");
+                  setPurchaseRate("");
+                  setSellingPrice("");
+                  setWholesalePrice("");
+                  setMinStockLevel("");
+                }}
+                asChild
+              >
+                <Button className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Stock & Purchase
+                </Button>
+              </DialogTrigger>
 
               <DialogContent className="max-w-2xl max-h-full overflow-y-scroll bg-background/95 backdrop-blur-sm border-0 shadow-2xl">
                 <DialogHeader className="border-b border-border/50 pb-4">
@@ -497,7 +548,9 @@ const StockPurchaseDetails = () => {
                   {/* Purchase No & Date */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Purchase No</Label>
+                      <Label>
+                        Purchase No <span className="text-red-500">*</span>
+                      </Label>
                       <Input
                         value={purchaseNo}
                         onChange={(e) => setPurchaseNo(e.target.value)}
@@ -507,7 +560,9 @@ const StockPurchaseDetails = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Purchase Date</Label>
+                      <Label>
+                        Purchase Date <span className="text-red-500">*</span>
+                      </Label>
                       <Input
                         type="date"
                         value={purchaseDate}
@@ -520,46 +575,86 @@ const StockPurchaseDetails = () => {
                   {/* Supplier & Warehouse */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Supplier</Label>
-                      <Select value={supplier} onValueChange={setSupplier}>
-                        <SelectTrigger className="border-2">
-                          <SelectValue placeholder="Select Supplier" />
-                        </SelectTrigger>
+                      <Label className="text-sm font-medium text-foreground">
+                        Supplier <span className="text-red-500">*</span>
+                      </Label>
 
-                        <SelectContent>
-                          {/* {supplierList?.map((s) => (
-                            <SelectItem key={s._id} value={s._id}>
-                              {s.supplierName}
-                            </SelectItem>
-                          ))} */}
-                        </SelectContent>
-                      </Select>
+                      {supplierLoading ? (
+                        <div className="flex justify-center items-center h-12 border rounded-lg bg-muted/30">
+                          <Loader className="w-5 h-5 text-primary animate-spin mr-2" />
+                        </div>
+                      ) : (
+                        <Select value={supplier} onValueChange={setSupplier}>
+                          <SelectTrigger className="border-2">
+                            <SelectValue placeholder="Select Supplier" />
+                          </SelectTrigger>
+
+                          <SelectContent>
+                            {suppliers.length > 0 ? (
+                              suppliers.map((s) => (
+                                <SelectItem
+                                  key={s._id}
+                                  value={s._id}
+                                  className="hover:bg-blue-600 hover:text-white transition-colors"
+                                >
+                                  {s.supplierName}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="no-data" disabled>
+                                No suppliers found
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Warehouse</Label>
-                      <Select
-                        value={selectedWarehouse}
-                        onValueChange={setSelectedWarehouse}
-                      >
-                        <SelectTrigger className="border-2">
-                          <SelectValue placeholder="Select Warehouse" />
-                        </SelectTrigger>
+                      <Label className="text-sm font-medium text-foreground">
+                        Warehouse <span className="text-red-500">*</span>
+                      </Label>
 
-                        <SelectContent>
-                          {warehouses?.map((wh) => (
-                            <SelectItem key={wh._id} value={wh._id}>
-                              {wh.warehouseName}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {warehouseLoading ? (
+                        <div className="flex justify-center items-center h-12 border rounded-lg bg-muted/30">
+                          <Loader className="w-5 h-5 text-primary animate-spin mr-2" />
+                        </div>
+                      ) : (
+                        <Select
+                          value={selectedWarehouse}
+                          onValueChange={setSelectedWarehouse}
+                        >
+                          <SelectTrigger className=" border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200">
+                            <SelectValue placeholder="Select Warehouse" />
+                          </SelectTrigger>
+
+                          <SelectContent>
+                            {warehouses.length > 0 ? (
+                              warehouses.map((wh) => (
+                                <SelectItem
+                                  key={wh._id}
+                                  value={wh._id}
+                                  className="hover:bg-blue-600 hover:text-white transition-colors"
+                                >
+                                  <span>{wh.warehouseName}</span>
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="no-data" disabled>
+                                No warehouses found
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
                   </div>
 
                   {/* Tracking Number */}
                   <div className="space-y-2">
-                    <Label>Tracking Number</Label>
+                    <Label>
+                      Tracking Number <span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       value={trackingNumber}
                       onChange={(e) => setTrackingNumber(e.target.value)}
@@ -576,25 +671,43 @@ const StockPurchaseDetails = () => {
                     <div className="grid grid-cols-2 gap-4">
                       {/* Item Select */}
                       <div className="space-y-2">
-                        <Label>Item</Label>
+                        <Label>
+                          Item <span className="text-red-500">*</span>
+                        </Label>
                         <Select value={itemId} onValueChange={setItemId}>
                           <SelectTrigger className="border-2">
                             <SelectValue placeholder="Select Item" />
                           </SelectTrigger>
 
                           <SelectContent>
-                            {itemNames.map((item) => (
-                              <SelectItem key={item.id} value={item.id}>
-                                {item.name}
+                            {itemNameLoading ? (
+                              <SelectItem
+                                value="loading"
+                                disabled
+                                className="flex justify-center items-center py-3"
+                              >
+                                <Loader className="w-5 h-5 text-primary animate-spin" />
                               </SelectItem>
-                            ))}
+                            ) : itemNames.length > 0 ? (
+                              itemNames.map((item) => (
+                                <SelectItem key={item._id} value={item._id}>
+                                  {item.itemName}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="no-data" disabled>
+                                No items found
+                              </SelectItem>
+                            )}
                           </SelectContent>
                         </Select>
                       </div>
 
                       {/* Description */}
                       <div className="space-y-2">
-                        <Label>Description</Label>
+                        <Label>
+                          Description <span className="text-red-500">*</span>
+                        </Label>
                         <Input
                           value={description}
                           onChange={(e) => setDescription(e.target.value)}
@@ -608,7 +721,9 @@ const StockPurchaseDetails = () => {
                     <div className="grid grid-cols-3 gap-4 mt-4">
                       {/* Qty */}
                       <div className="space-y-2">
-                        <Label>Quantity</Label>
+                        <Label>
+                          Quantity <span className="text-red-500">*</span>
+                        </Label>
                         <Input
                           type="number"
                           value={quantity}
@@ -619,7 +734,9 @@ const StockPurchaseDetails = () => {
 
                       {/* Unit Cost */}
                       <div className="space-y-2">
-                        <Label>Unit Cost</Label>
+                        <Label>
+                          Unit Cost <span className="text-red-500">*</span>
+                        </Label>
                         <Input
                           type="number"
                           value={unitCost}
@@ -631,7 +748,9 @@ const StockPurchaseDetails = () => {
 
                       {/* Barcode */}
                       <div className="space-y-2">
-                        <Label>Barcode</Label>
+                        <Label>
+                          Barcode <span className="text-red-500">*</span>
+                        </Label>
                         <Input
                           value={barcode}
                           onChange={(e) => setBarcode(e.target.value)}
@@ -684,10 +803,10 @@ const StockPurchaseDetails = () => {
                               </tr>
                             ))}
                           </tbody>
-                        </table>                 
+                        </table>
                       </div>
                     )}
-                    {purchaseItems.length>0 &&(
+                    {purchaseItems.length > 0 && (
                       <>
                         {/* Totals Summary Box */}
                         <div className="mt-4 w-full flex justify-end">
@@ -720,16 +839,24 @@ const StockPurchaseDetails = () => {
                             </div>
                           </div>
                         </div>
-                        </>
+                      </>
                     )}
                   </div>
 
                   {/* SAVE BUTTON */}
                   <Button
-                    className="w-full bg-gradient-to-r from-primary to-primary/90 py-3 text-base font-medium"
+                    disabled={saving}
+                    className="w-full h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-base font-medium mt-4 flex items-center justify-center"
                     onClick={handleSavePurchase}
                   >
-                    Save Purchase
+                    {saving ? (
+                      <div className="flex items-center justify-center">
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                        Saving...
+                      </div>
+                    ) : (
+                      "Save Purchase"
+                    )}
                   </Button>
                 </div>
               </DialogContent>
@@ -765,7 +892,7 @@ const StockPurchaseDetails = () => {
                     Total Stock Value
                   </p>
                   <p className="text-2xl font-bold text-green-900">
-                    € {summary.totalStockValue.toLocaleString() || 0}
+                    € {(summary.totalStockValue ?? 0).toLocaleString()}
                   </p>
                 </div>
                 <div className="p-2 bg-green-500/10 rounded-lg">
@@ -831,26 +958,63 @@ const StockPurchaseDetails = () => {
         </Card>
 
         {/* Stock Table with Actions Field */}
-        <Card className="border-0 shadow-xl  hover:shadow-2xl transition-all duration-500 bg-gradient-to-br from-background to-muted/5 overflow-hidden">
+        {/* Stock Table with Actions Field */}
+        <Card className="border-0 shadow-xl hover:shadow-2xl transition-all duration-500 bg-gradient-to-br from-background to-muted/5 overflow-hidden">
           <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5 border-b border-primary/20 pb-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent flex items-center gap-2">
                 <Warehouse className="w-5 h-5 text-primary" />
                 Stock Inventory
               </CardTitle>
+
+              {/* ⭐ TABS ADDED HERE */}
               <div className="flex items-center gap-3">
+                <div className="flex gap-2">
+                  <Button
+                    variant={activeTab === "all" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      setActiveTab("all");
+                      setCurrentPage(1);
+                    }}
+                  >
+                    All
+                  </Button>
+
+                  <Button
+                    variant={activeTab === "pending" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      setActiveTab("pending");
+                      setCurrentPage(1);
+                    }}
+                  >
+                    Pending
+                  </Button>
+
+                  <Button
+                    variant={activeTab === "received" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      setActiveTab("received");
+                      setCurrentPage(1);
+                    }}
+                  >
+                    Received
+                  </Button>
+                </div>
+
                 <Badge
                   variant="secondary"
                   className="bg-primary/10 text-primary border-primary/20"
                 >
                   {filteredStock.length} items
                 </Badge>
+
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    setIsCustomizeOpen(true);
-                  }}
+                  onClick={() => setIsCustomizeOpen(true)}
                   className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl text-white transition-all duration-200"
                 >
                   Customize
@@ -869,46 +1033,49 @@ const StockPurchaseDetails = () => {
                         Sr
                       </th>
                     )}
-                    {visibleFields.includes("itemCode") && (
+
+                    {visibleFields.includes("purchaseNo") && (
                       <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                        Item Code
+                        Purchase No
                       </th>
                     )}
-                    {visibleFields.includes("itemName") && (
+
+                    {visibleFields.includes("supplier") && (
                       <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                        Item Name
+                        Supplier
                       </th>
                     )}
-                    {visibleFields.includes("openingStock") && (
+
+                    {visibleFields.includes("purchaseDate") && (
                       <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                        Opening Stock
+                        Purchase Date
                       </th>
                     )}
-                    {visibleFields.includes("purchaseRate") && (
+
+                    {visibleFields.includes("trackingNumber") && (
                       <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                        Purchase Rate
+                        Tracking No
                       </th>
                     )}
-                    {visibleFields.includes("sellingPrice") && (
+
+                    {visibleFields.includes("status") && (
                       <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                        Selling Price
+                        Status
                       </th>
                     )}
-                    {visibleFields.includes("wholesalePrice") && (
+
+                    {visibleFields.includes("grandTotal") && (
                       <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                        Wholesale Price
+                        Grand Total
                       </th>
                     )}
-                    {visibleFields.includes("location") && (
+
+                    {visibleFields.includes("warehouse") && (
                       <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                        Location
+                        Warehouse
                       </th>
                     )}
-                    {visibleFields.includes("minStock") && (
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
-                        Min Stock
-                      </th>
-                    )}
+
                     {visibleFields.includes("actions") && (
                       <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
                         Actions
@@ -920,135 +1087,108 @@ const StockPurchaseDetails = () => {
                 <tbody className="divide-y divide-border/30">
                   {loading ? (
                     <tr>
-                      <td colSpan="10" className="py-20 text-center">
-                        <div className="flex flex-col items-center justify-center">
+                      <td colSpan="10" className="py-20">
+                        <div className="flex flex-col items-center justify-center w-full">
                           <Loader className="w-10 h-10 text-primary animate-spin mb-3" />
                         </div>
                       </td>
                     </tr>
                   ) : filteredStock.length > 0 ? (
-                    currentStock.map((item, index) => (
+                    currentStock.map((purchase, index) => (
                       <tr
-                        key={item._id || index}
-                        className="group hover:bg-primary/5 transition-all duration-300 ease-in-out transform hover:scale-[1.002]"
+                        key={purchase._id}
+                        className="group hover:bg-primary/5 transition-all duration-300"
                       >
                         {visibleFields.includes("sr") && (
-                          <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[130px] font-semibold">
+                          <td className="px-6 py-4">
                             {startIndex + index + 1}
                           </td>
                         )}
 
-                        {visibleFields.includes("itemCode") && (
-                          <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[130px]">
-                            <div className="font-mono text-sm font-semibold bg-primary/10 text-primary px-2 py-1 rounded-md border border-primary/20 inline-block">
-                              {item.itemCode || "-"}
-                            </div>
-                          </td>
-                        )}
-
-                        {visibleFields.includes("itemName") && (
-                          <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[130px]">
-                            <div className="font-semibold text-foreground group-hover:text-primary transition-colors duration-200">
-                              {item.itemName || "-"}
-                            </div>
-                          </td>
-                        )}
-
-                        {visibleFields.includes("openingStock") && (
-                          <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[130px]">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={`font-bold text-lg ${
-                                  getStockStatus(
-                                    item.openingStock,
-                                    item.minStockLevel
-                                  ) === "critical"
-                                    ? "text-red-600"
-                                    : getStockStatus(
-                                        item.openingStock,
-                                        item.minStockLevel
-                                      ) === "warning"
-                                    ? "text-amber-600"
-                                    : "text-green-600"
-                                }`}
-                              >
-                                {item.openingStock || "-"}
-                              </span>
-                              {getStockStatus(
-                                item.openingStock,
-                                item.minStockLevel
-                              ) === "critical" && (
-                                <AlertTriangle className="w-4 h-4 text-red-500" />
-                              )}
-                            </div>
-                          </td>
-                        )}
-
-                        {visibleFields.includes("purchaseRate") && (
+                        {visibleFields.includes("purchaseNo") && (
                           <td className="px-6 py-4">
-                            €{item.purchaseRate ?? "-"}
-                          </td>
-                        )}
-                        {visibleFields.includes("sellingPrice") && (
-                          <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[130px]">
-                            €{item.sellingPrice ?? "-"}
-                          </td>
-                        )}
-                        {visibleFields.includes("wholesalePrice") && (
-                          <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[130px]">
-                            €{item.wholesalePrice ?? "-"}
-                          </td>
-                        )}
-                        {visibleFields.includes("location") && (
-                          <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[130px]">
-                            {item?.warehouseId?.warehouseAddress || "-"}
-                          </td>
-                        )}
-                        {visibleFields.includes("minStock") && (
-                          <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[130px]">
-                            {item.minStockLevel || "-"}
+                            <div className="font-mono text-sm font-semibold bg-primary/10 text-primary px-2 py-1 rounded-md border border-primary/20 inline-block">
+                              {purchase?.purchaseNo || "-"}
+                            </div>
                           </td>
                         )}
 
+                        {visibleFields.includes("supplier") && (
+                          <td className="px-6 py-4">
+                            {purchase?.supplier?.supplierName || "-"}
+                          </td>
+                        )}
+
+                        {visibleFields.includes("purchaseDate") && (
+                          <td className="px-6 py-4">
+                            {purchase?.purchaseDate?.split("T")[0] || "-"}
+                          </td>
+                        )}
+
+                        {visibleFields.includes("trackingNumber") && (
+                          <td className="px-6 py-4">
+                            {purchase?.trackingNumber || "-"}
+                          </td>
+                        )}
+
+                        {visibleFields.includes("status") && (
+                          <td className="px-6 py-4">
+                            <Badge
+                              className={`px-2 py-1 ${
+                                purchase.status === "Received"
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-gray-300 text-gray-700"
+                              }`}
+                            >
+                              {purchase?.status}
+                            </Badge>
+                          </td>
+                        )}
+
+                        {visibleFields.includes("grandTotal") && (
+                          <td className="px-6 py-4 font-semibold">
+                            € {(purchase?.grandTotal ?? 0).toLocaleString()}
+                          </td>
+                        )}
+
+                        {visibleFields.includes("warehouse") && (
+                          <td className="px-6 py-4">
+                            {purchase?.warehouse?.warehouseName || "-"}
+                          </td>
+                        )}
+
+                        {/* ⭐ UPDATED ACTIONS BY TAB */}
                         {visibleFields.includes("actions") && (
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-1">
+                              {/* VIEW (Always) */}
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleView(item._id)}
-                                title="View"
+                                onClick={() => handleView(purchase._id)}
                               >
-                                <Eye className="w-4 h-4" />
+                                <Eye size={16} />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEdit(item._id)}
-                                title="Edit"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              {getStockStatus(
-                                item.openingStock,
-                                item.minStockLevel
-                              ) === "critical" && (
+
+                              {/* EDIT (Only ALL + PENDING) */}
+                              {(activeTab === "all" ||
+                                activeTab === "pending") && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleRestock(item._id)}
-                                  title="Restock"
+                                  onClick={() => handleEdit(purchase._id)}
                                 >
-                                  <RefreshCw className="w-4 h-4" />
+                                  <Edit size={16} />
                                 </Button>
                               )}
+
+                              {/* DELETE (Always allowed) */}
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleDelete(item._id)}
-                                title="Delete"
+                                onClick={() => handleDelete(purchase._id)}
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 size={16} />
                               </Button>
                             </div>
                           </td>
@@ -1060,18 +1200,15 @@ const StockPurchaseDetails = () => {
                       <td colSpan="10" className="text-center py-12">
                         <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
                         <p className="text-muted-foreground font-medium text-lg">
-                          No stock items found
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-2">
-                          Try adjusting your search terms or add a new stock
-                          entry
+                          No purchase stock found
                         </p>
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
-              {/* Pagination Component */}
+
+              {/* Pagination */}
               <Pagination
                 currentPage={currentPage}
                 totalItems={filteredStock.length}
@@ -1109,14 +1246,13 @@ const StockPurchaseDetails = () => {
           <div className="grid grid-cols-2 gap-3 py-6 px-1">
             {[
               { key: "sr", label: "Sr" },
-              { key: "itemCode", label: "Item Code" },
-              { key: "itemName", label: "Item Name" },
-              { key: "openingStock", label: "Opening Stock" },
-              { key: "purchaseRate", label: "Purchase Rate" },
-              { key: "sellingPrice", label: "Selling Price" },
-              { key: "wholesalePrice", label: "Wholesale Price" },
-              { key: "location", label: "Location" },
-              { key: "minStock", label: "Min Stock" },
+              { key: "purchaseNo", label: "Purchase No" },
+              { key: "supplier", label: "Supplier Name" },
+              { key: "purchaseDate", label: "Purchase Date" },
+              { key: "trackingNumber", label: "Tracking Number" },
+              { key: "status", label: "Status" },
+              { key: "grandTotal", label: "Grand Total" },
+              { key: "warehouse", label: "Warehouse" },
               { key: "actions", label: "Actions" },
             ].map(({ key, label }) => (
               <label
@@ -1140,8 +1276,9 @@ const StockPurchaseDetails = () => {
                     });
                   }}
                   className="peer appearance-none w-5 h-5 border border-gray-300 dark:border-gray-700 rounded-md checked:bg-gradient-to-br checked:from-primary checked:to-primary/70 transition-all duration-200 flex items-center justify-center relative
-            after:content-['✓'] after:text-white after:font-bold after:text-[11px] after:opacity-0 checked:after:opacity-100 after:transition-opacity"
+        after:content-['✓'] after:text-white after:font-bold after:text-[11px] after:opacity-0 checked:after:opacity-100 after:transition-opacity"
                 />
+
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-primary transition-colors">
                   {label}
                 </span>
