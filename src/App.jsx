@@ -7,8 +7,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import CompanySelection from "./pages/CompanySelection";
 import Dashboard from "./pages/Dashboard";
-import Sales from "./pages/Sales";
-import Consignment from "./pages/Consignment";
 import Barcode from "./pages/Barcode";
 import Communication from "./pages/Communication";
 import NotFound from "./pages/NotFound";
@@ -65,9 +63,6 @@ const App = () => (
             }
           />
 
-          {/* SALES MAIN ROUTE (Parent) */}
-          <Route path="/sales-managment" element={<Sales />} />
-
           {/* SALES MODULE SUBPAGES */}
           <Route path="/sales/invoice" element={<Invoice />} />
           <Route path="/sales/sales-history" element={<SalesHistory />} />
@@ -100,7 +95,6 @@ const App = () => (
           />
 
           {/* Other Modules */}
-          <Route path="/consignment" element={<Consignment />} />
           <Route path="/barcode" element={<Barcode />} />
           <Route path="/communication" element={<Communication />} />
 
