@@ -148,21 +148,21 @@ const ProductInfo = () => {
     }
   }, [products, isAddOpen, isEditMode]);
 
-  useEffect(() => {
-    if (!selectedCategory) return;
+  // useEffect(() => {
+  //   if (!selectedCategory) return;
 
-    // Reset size ONLY in ADD mode
-    if (!isEditMode) {
-      setSelectedSize("");
-    }
+  //   // Reset size ONLY in ADD mode
+  //   if (!isEditMode) {
+  //     setSelectedSize("");
+  //   }
 
-    const cat = categories.find((c) => c.categoryName === selectedCategory);
-    if (cat && Array.isArray(cat.sizes)) {
-      setSizes(cat.sizes.map((s) => (typeof s === "string" ? s : s.size)));
-    } else {
-      setSizes([]);
-    }
-  }, [selectedCategory, categories]);
+  //   const cat = categories.find((c) => c.categoryName === selectedCategory);
+  //   if (cat && Array.isArray(cat.sizes)) {
+  //     setSizes(cat.sizes.map((s) => (typeof s === "string" ? s : s.size)));
+  //   } else {
+  //     setSizes([]);
+  //   }
+  // }, [selectedCategory, categories]);
 
   console.log({ categories });
 
@@ -236,10 +236,7 @@ const ProductInfo = () => {
       return;
     }
 
-    if (!selectedSize || selectedSize.trim() === "") {
-      toast.error("Size is required!");
-      return;
-    }
+   
 
     try {
       setLoading(true);
@@ -249,7 +246,6 @@ const ProductInfo = () => {
       formData.append("itemCode", itemCode);
       formData.append("itemName", itemName);
       formData.append("category", selectedCategory);
-      formData.append("size", selectedSize);
       formData.append("sku", sku);
       formData.append("barcode", barcode);
 
@@ -465,8 +461,10 @@ const ProductInfo = () => {
                     </div>
                   </div>
 
-                  {/* Category + Size (Same Line) */}
-                  <div className="grid grid-cols-2 gap-4">
+                 
+
+                  {/* SKU + Barcode (Same Line) */}
+                  <div className="grid grid-cols-3 gap-4">
                     {/* Category Selection */}
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-foreground flex items-center gap-2">
@@ -483,7 +481,7 @@ const ProductInfo = () => {
                           value={selectedCategory}
                           onValueChange={setSelectedCategory}
                         >
-                          <SelectTrigger className="bg-muted/50 border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200">
+                          <SelectTrigger className=" border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200">
                             <SelectValue placeholder="Select Category" />
                           </SelectTrigger>
 
@@ -516,39 +514,6 @@ const ProductInfo = () => {
                         </Select>
                       )}
                     </div>
-
-                    {/* Size Dropdown */}
-                    <div className="space-y-1">
-                      <Label className="text-sm font-medium text-foreground">
-                        Size
-                      </Label>
-                      <Select
-                        value={selectedSize}
-                        onValueChange={setSelectedSize}
-                      >
-                        <SelectTrigger className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200">
-                          <SelectValue placeholder="Select Size" />
-                        </SelectTrigger>
-
-                        <SelectContent>
-                          {sizes?.length > 0 ? (
-                            sizes.map((sz, idx) => (
-                              <SelectItem key={idx} value={sz}>
-                                {sz}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem value="no-size" disabled>
-                              No size found
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* SKU + Barcode (Same Line) */}
-                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label className="text-sm font-medium text-foreground">
                         SKU
@@ -564,7 +529,7 @@ const ProductInfo = () => {
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-foreground flex items-center gap-2">
                         <Barcode className="w-4 h-4" />
-                        Barcode (Optional)
+                        Barcode
                       </Label>
                       <Input
                         placeholder="Scan or enter barcode"
