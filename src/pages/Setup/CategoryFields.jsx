@@ -115,7 +115,12 @@ const CategoryPage = () => {
           name: item.categoryName || "-",
           description: item.description || "-",
           status: item.status || "-",
-          sizes: item.sizes || "-",
+          sizes: Array.isArray(item.sizes)
+            ? item.sizes.map((s) => `${s.size}`)
+            : [],
+            stock:  Array.isArray(item.sizes)
+            ? item.sizes.map((s) => `${s.stock}`)
+            : [],
           logo: item.logo?.url || "",
           createdAt: new Date(item.createdAt).toLocaleDateString(),
         }));
@@ -245,9 +250,6 @@ const CategoryPage = () => {
   // 🟢 Delete Category
   const handleDelete = async (categoryId) => {
     try {
-      
-    
-
       setLoading(true); // show loader
 
       // Get token from localStorage (or wherever you store it)
@@ -287,6 +289,7 @@ const CategoryPage = () => {
     setSearchTerm(e.target.value);
     setCurrentPage(1); // Reset pagination when searching
   };
+  console.log(currentCategorize);
 
   return (
     <DashboardLayout>
@@ -624,6 +627,9 @@ const CategoryPage = () => {
                       Sizes
                     </th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
+                      Stock
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground/80 uppercase tracking-wider">
                       Status
                     </th>
                     <th className="px-6 py-4 text-center text-sm font-semibold text-foreground/80 uppercase tracking-wider">
@@ -663,9 +669,13 @@ const CategoryPage = () => {
                           </td>
                           <td className="px-6 py-4">{category.description}</td>
                           <td className="px-6 py-4">
-                            {Array.isArray(category.sizes) &&
-                            category.sizes.length > 0
+                            {Array.isArray(category.sizes)
                               ? category.sizes.join(", ")
+                              : "-"}
+                          </td>
+                           <td className="px-6 py-4">
+                            {Array.isArray(category.stock)
+                              ? category.stock.join(", ")
                               : "-"}
                           </td>
 

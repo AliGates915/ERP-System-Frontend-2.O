@@ -55,7 +55,10 @@ import api from "../../Api/AxiosInstance";
 import InvoiceViewModal from "../Inventory/Models/InvoiceViewModal";
 
 const Invoice = () => {
-  const [exporting, setExporting] = useState(false);
+  const [qtyError, setQtyError] = useState("");
+
+  const [saving, setSaving] = useState(false);
+  const [availableSizes, setAvailableSizes] = useState([]);
   const [invoiceNo, setInvoiceNo] = useState("");
   const [customerList, setCustomerList] = useState([]);
   const [customerLoading, setCustomerLoading] = useState(false);
@@ -95,7 +98,6 @@ const Invoice = () => {
   const [vatRegime, setVatRegime] = useState("");
 
   const [itemId, setItemId] = useState("");
-  const [description, setDescription] = useState("");
   const [quantity, setQuantity] = useState("");
   const [unitPrice, setUnitPrice] = useState("");
   const [vatRate, setVatRate] = useState("");
@@ -260,7 +262,6 @@ const Invoice = () => {
       setVatRegime("");
       setStatus("Draft");
       setItemId("");
-      setDescription("");
       setQuantity("");
       setUnitPrice("");
       setVatRate("");
@@ -305,7 +306,7 @@ const Invoice = () => {
       if (fullInvoice.items && fullInvoice.items.length > 0) {
         const formattedItems = fullInvoice.items.map((item) => ({
           itemId: item.itemId,
-          description: item.description,
+          size: item.size,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           vatRegime: item.vatRegime,
@@ -330,23 +331,34 @@ const Invoice = () => {
     }
   };
 
-  const handleEditItem = (index, item) => {
-    // Set editing index
+  const handleEditItem = async (index, item) => {
     setEditingItemIndex(index);
 
-    // Populate form fields with item data
     setItemId(item.itemId);
-    setDescription(item.description);
+    setSize(item.size);
     setQuantity(item.quantity.toString());
     setUnitPrice(item.unitPrice.toString());
     setVatRegime(item.vatRegime);
-    setVatRate((item.vatRate * 100).toString()); // Convert back to percentage
+    setVatRate((item.vatRate * 100).toString());
 
-    // Auto-calculate will handle the totals
+    // 🚀 Load category sizes for edit mode
+    const selectedItem = itemsList.find((it) => it._id === item.itemId);
+    if (selectedItem) {
+      try {
+        const res = await api.get(
+          `/categories/sizes-available/${selectedItem.category.replace(
+            /\s+/g,
+            ""
+          )}`
+        );
+        setAvailableSizes(res.data.data?.sizes || []);
+      } catch (err) {
+        console.log("Size fetch failed:", err);
+        setAvailableSizes([]);
+      }
+    }
 
-    toast.success(
-      "Item loaded for editing. Click 'Update Item' to save changes."
-    );
+    toast.success("Item loaded for editing.");
   };
 
   // Update handleAddItem to handle both add and update
@@ -360,7 +372,7 @@ const Invoice = () => {
 
     const newItem = {
       itemId,
-      description: description || selectedItem?.itemName || "Item",
+      size: size || selectedItem?.itemName || "Item",
       quantity: Number(quantity),
       unitPrice: Number(unitPrice),
       vatRegime: vatRegime,
@@ -391,10 +403,11 @@ const Invoice = () => {
   // Reset item form function
   const resetItemForm = () => {
     setItemId("");
-    setDescription("");
+    setSize("");
     setQuantity("");
     setUnitPrice("");
     setVatRate("");
+    setVatRegime("");
     setTotalExclVAT(0);
     setVatAmount(0);
     setTotalInclVAT(0);
@@ -538,6 +551,7 @@ const Invoice = () => {
   };
 
   const handleSaveInvoice = async () => {
+    setSaving(true);
     if (!selectedCustomer) {
       toast.error("Please select a customer");
       return;
@@ -556,10 +570,10 @@ const Invoice = () => {
         customer: selectedCustomer,
         items: invoiceItems.map((item) => ({
           itemId: item.itemId,
-          description: item.description,
+          size: item.size,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
-          vatRegime,
+          vatRegime: item.vatRegime, // ✅ FIXED
           vatRate: item.vatRate,
         })),
       };
@@ -576,6 +590,7 @@ const Invoice = () => {
       // =============================
       // 🚀 FINAL INVOICE LOGIC
       // =============================
+
       if (status === "Final") {
         if (!editingInvoiceId) {
           toast.error("Cannot finalize without invoice ID / draft first!");
@@ -635,6 +650,8 @@ const Invoice = () => {
     } catch (error) {
       console.error("Invoice Error:", error);
       toast.error(error.response?.data?.message || "Error saving invoice");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -645,7 +662,7 @@ const Invoice = () => {
       date: new Date(inv.invoiceDate).toLocaleDateString(),
       customerName: inv.customer?.customerName || inv.customerName,
       phoneNumber: inv.customer?.phoneNumber,
-      description: inv.items?.[0]?.description || "-",
+      size: inv.items?.[0]?.size || "-",
       quantity: inv.items?.[0]?.quantity || 0,
       unit: inv?.items[0].unitPrice,
       vatRate: (inv.items?.[0]?.vatRate || 0) * 100,
@@ -669,7 +686,7 @@ const Invoice = () => {
       date: new Date(inv.invoiceDate).toLocaleDateString(),
       customerName: inv.customer?.customerName || inv.customerName,
       phoneNumber: inv.customer?.phoneNumber,
-      description: inv.items?.[0]?.description || "-",
+      size: inv.items?.[0]?.size || "-",
       quantity: inv.items?.[0]?.quantity || 0,
       unit: inv?.items[0].unitPrice,
       vatRate: (inv.items?.[0]?.vatRate || 0) * 100,
@@ -693,7 +710,7 @@ const Invoice = () => {
       date: new Date(inv.invoiceDate).toLocaleDateString(),
       customerName: inv.customer?.customerName || inv.customerName,
       phoneNumber: inv.customer?.phoneNumber,
-      description: inv.items?.[0]?.description || "-",
+      size: inv.items?.[0]?.size || "-",
       quantity: inv.items?.[0]?.quantity || 0,
       unit: inv?.items[0].unitPrice,
       vatRate: (inv.items?.[0]?.vatRate || 0) * 100,
@@ -877,6 +894,7 @@ const Invoice = () => {
       toast.success("Redirecting to WhatsApp...");
     }
   };
+  console.log({ availableSizes });
 
   return (
     <DashboardLayout>
@@ -1033,23 +1051,42 @@ const Invoice = () => {
                         ) : (
                           <Select
                             value={itemId}
-                            onValueChange={(value) => {
+                            onValueChange={async (value) => {
                               setItemId(value);
+
                               const selectedItem = itemsList.find(
                                 (item) => item._id === value
                               );
+
                               if (selectedItem) {
-                                setDescription(
-                                  selectedItem.description ||
-                                    selectedItem.itemName
-                                );
                                 setUnitPrice(selectedItem.sellingPrice || 0);
+
+                                // 🚀 GET SIZES FROM CATEGORY API
+                                try {
+                                  const res = await api.get(
+                                    `/categories/sizes-available/${selectedItem.category.replace(
+                                      /\s+/g,
+                                      ""
+                                    )}`
+                                  );
+
+                                  setAvailableSizes(
+                                    (res.data.data?.sizes || []).map((s) => ({
+                                      size: s.size,
+                                      stock: s.stock,
+                                    }))
+                                  );
+                                } catch (err) {
+                                  console.log("Size fetch failed:", err);
+                                  setAvailableSizes([]); // No sizes found
+                                }
                               }
                             }}
                           >
                             <SelectTrigger className="border-2">
                               <SelectValue placeholder="Select item" />
                             </SelectTrigger>
+
                             <SelectContent>
                               {itemsList.length > 0 ? (
                                 itemsList.map((item) => (
@@ -1068,20 +1105,22 @@ const Invoice = () => {
                       {/* Size Selection */}
                       <div className="space-y-2">
                         <Label>Size</Label>
-                        <Select
-                          value={size}
-                          onValueChange={(value) => setSize(value)}
-                        >
+
+                        <Select value={size} onValueChange={setSize}>
                           <SelectTrigger className="border-2">
                             <SelectValue placeholder="Select size" />
                           </SelectTrigger>
+
                           <SelectContent>
-                            <SelectItem value="Small">Small</SelectItem>
-                            <SelectItem value="Medium">Medium</SelectItem>
-                            <SelectItem value="Large">Large</SelectItem>
-                            <SelectItem value="Extra Large">
-                              Extra Large
-                            </SelectItem>
+                            {availableSizes.length > 0 ? (
+                              availableSizes.map((szObj) => (
+                                <SelectItem key={szObj.size} value={szObj.size}>
+                                  {szObj.size} (Stock: {szObj.stock})
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem disabled>No sizes</SelectItem>
+                            )}
                           </SelectContent>
                         </Select>
                       </div>
@@ -1094,9 +1133,36 @@ const Invoice = () => {
                         <Input
                           type="number"
                           value={quantity}
-                          onChange={(e) => setQuantity(e.target.value)}
+                          onChange={(e) => {
+                            const value = Number(e.target.value);
+
+                            const selectedSizeObj = availableSizes.find(
+                              (x) => x.size === size
+                            );
+
+                            // ❌ If no size selected yet
+                            if (!selectedSizeObj) {
+                              setQuantity(value);
+                              return;
+                            }
+
+                            // ❌ Block if > stock
+                            if (value > selectedSizeObj.stock) {
+                              toast.error(
+                                `Only ${selectedSizeObj.stock} units available in stock`
+                              );
+                              return; // ⛔ STOP — prevents updating state
+                            }
+
+                            // ✅ Allowed
+                            setQuantity(value);
+                            setQtyError("");
+                          }}
                           className="border-2"
                         />
+                        {qtyError && (
+                          <p className="text-red-500 text-sm">{qtyError}</p>
+                        )}
                       </div>
 
                       {/* Unit Price */}
@@ -1282,10 +1348,20 @@ const Invoice = () => {
 
                   {/* SAVE BUTTON */}
                   <Button
-                    className="w-full bg-gradient-to-r from-primary to-primary/90 py-3 text-base font-medium"
+                    disabled={saving}
+                    className="w-full h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 py-3 text-base font-medium mt-4 flex items-center justify-center"
                     onClick={handleSaveInvoice}
                   >
-                    {isEditMode ? "Update Invoice" : "Save Invoice"}
+                    {saving ? (
+                      <div className="flex items-center justify-center">
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                        {isEditMode ? "Updating..." : "Saving..."}
+                      </div>
+                    ) : isEditMode ? (
+                      "Update Invoice"
+                    ) : (
+                      "Save Invoice"
+                    )}
                   </Button>
                 </div>
               </DialogContent>
@@ -1490,7 +1566,7 @@ const Invoice = () => {
                     currentInvoices.map((item, i) => (
                       <tr
                         key={item._id || i}
-                        className="group hover:bg-primary/5 transition-all duration-300"
+                        className="group whitespace-nowrap hover:bg-primary/5 transition-all duration-300"
                       >
                         <td className="px-6 py-4 font-semibold">
                           {(currentPage - 1) * itemsPerPage + i + 1}
@@ -1502,7 +1578,7 @@ const Invoice = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-[130px]">
-                          {item.description}
+                          {item.size}
                         </td>
                         <td className="px-6 py-4">{item.quantity}</td>
                         <td className="px-6 py-4">{item.unit}</td>
