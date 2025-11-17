@@ -1184,7 +1184,7 @@ const Invoice = () => {
                           }}
                         >
                           <SelectTrigger className="border-2">
-                            <SelectValue placeholder="Select VAT Type" />
+                            <SelectValue placeholder="Select VAT Regime" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Exemption">
