@@ -275,6 +275,8 @@ const StockPurchaseDetails = () => {
     try {
       if (!category) return;
       setSizesLoading(true);
+      console.log("Loggg ", category);
+      
 
       const res = await api.get(`/categories/sizes/${category}`);
 
@@ -827,10 +829,7 @@ console.log({item});
                               // Fetch Sizes With Stock
                               try {
                                 const res = await api.get(
-                                  `/categories/sizes/${item.category.replace(
-                                    /\s+/g,
-                                    ""
-                                  )}`
+                                  `/categories/sizes/${item.category}`
                                 );
 
                                 const sizes = (res.data.data?.sizes || []).map(
