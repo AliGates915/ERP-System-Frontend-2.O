@@ -856,7 +856,7 @@ const StockPurchaseDetails = () => {
                             <SelectContent>
                               {availableSizes.map((szObj) => (
                                 <SelectItem key={szObj.size} value={szObj.size}>
-                                  {szObj.size}
+                                  {szObj.size} (Stock: {szObj.stock})
                                 </SelectItem>
                               ))}
                             </SelectContent>
