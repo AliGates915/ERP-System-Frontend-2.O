@@ -138,6 +138,8 @@ const CustomerDefinition = () => {
     "customerName",
     "phoneNumber",
     "email",
+    "city",
+    "postalCode",
     "country",
     "customerType",
     "category",
@@ -162,6 +164,8 @@ const CustomerDefinition = () => {
           email: item.email || "-",
           billingAddress: item.billingAddress || "-",
           country: item.country || "-",
+          city: item.city || "",
+          postalCode: item.postalCode || "",
           vatNumber: item.vatNumber || "-",
           customerType: item.customerType || "-",
           vatRegime: item.vatRegime || "-",
@@ -238,7 +242,10 @@ const CustomerDefinition = () => {
     phoneNumber: "",
     email: "",
     billingAddress: "",
+    city: "",
+    postalCode: "",
     country: "",
+    vatPrefix: "",
     vatNumber: "",
     customerType: "",
     vatRegime: "",
@@ -255,6 +262,8 @@ const CustomerDefinition = () => {
       phoneNumber: "",
       email: "",
       billingAddress: "",
+      city: "",
+      postalCode: "",
       country: "",
       vatNumber: "",
       customerType: "",
@@ -276,6 +285,8 @@ const CustomerDefinition = () => {
         phoneNumber: newCustomer.phoneNumber,
         email: newCustomer.email,
         billingAddress: newCustomer.billingAddress,
+        city: newCustomer.city,
+        postalCode: newCustomer.postalCode,
         country: newCustomer.country,
         vatNumber:
           newCustomer.customerType === "Company"
@@ -343,6 +354,8 @@ const CustomerDefinition = () => {
       phoneNumber: customer.phoneNumber,
       email: customer.email,
       billingAddress: customer.billingAddress,
+      city: customer.city || "",
+      postalCode: customer.postalCode || "",
       country: customer.country,
       vatPrefix: vatPrefix, // <-- ADD THIS
       vatNumber: vatNumeric, // <-- ADD THIS
@@ -509,7 +522,7 @@ const CustomerDefinition = () => {
                     </div>
 
                     {/* Billing Address */}
-                    <div className="space-y-2">
+                    <div className="space-y-2 md:col-span-2">
                       <Label className="text-sm font-medium flex items-center gap-2">
                         Billing Address<span className="text-red-500">*</span>
                       </Label>
@@ -527,7 +540,7 @@ const CustomerDefinition = () => {
                     </div>
 
                     {/* Country - NOW A DROPDOWN WITH 44 EUROPEAN COUNTRIES */}
-                    <div className="space-y-2">
+                    <div className="space-y-2 md:col-span-2">
                       <Label className="text-sm font-medium flex items-center gap-2">
                         Country<span className="text-red-500">*</span>
                       </Label>
@@ -548,6 +561,42 @@ const CustomerDefinition = () => {
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+
+                    {/* City */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        City<span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        placeholder="Paris, Berlin, Rome..."
+                        value={newCustomer.city}
+                        onChange={(e) =>
+                          setNewCustomer({
+                            ...newCustomer,
+                            city: e.target.value,
+                          })
+                        }
+                        className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+                      />
+                    </div>
+
+                    {/* Postal Code */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        Postal Code<span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        placeholder="75000"
+                        value={newCustomer.postalCode}
+                        onChange={(e) =>
+                          setNewCustomer({
+                            ...newCustomer,
+                            postalCode: e.target.value,
+                          })
+                        }
+                        className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+                      />
                     </div>
 
                     {/* Customer Type FIRST */}
@@ -683,8 +732,8 @@ const CustomerDefinition = () => {
                         ? "Updating..."
                         : "Saving..."
                       : editingCustomer
-                      ? "Update Customer"
-                      : "Save Customer"}
+                        ? "Update Customer"
+                        : "Save Customer"}
                   </Button>
                 </div>
               </DialogContent>
@@ -1033,6 +1082,8 @@ const CustomerDefinition = () => {
               { key: "customerName", label: "Customer Name" },
               { key: "phoneNumber", label: "Phone Number" },
               { key: "email", label: "Email" },
+              { key: "city", label: "City" },
+              { key: "postalCode", label: "Postal Code" },
               { key: "country", label: "Country" },
               { key: "customerType", label: "Customer Type" },
               { key: "vatNumber", label: "VAT Number" },

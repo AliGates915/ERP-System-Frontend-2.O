@@ -120,6 +120,8 @@ const ManageCompanies = () => {
     industry: "",
     vatPrefix: "",
     vatNumber: "",
+    city: "",
+    postalCode: "",
     country: "",
     status: "",
   });
@@ -203,11 +205,11 @@ const ManageCompanies = () => {
       if (!newCompany.name) return toast.error("Company name is required!");
       if (!newCompany.address) return toast.error("Address is required!");
       if (!newCompany.country) return toast.error("Country is required!");
-         // ✅ Email Validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (newCompany.email && !emailRegex.test(newCompany.email)) {
-      return toast.error("Please enter a valid email address!");
-    }
+      // ✅ Email Validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (newCompany.email && !emailRegex.test(newCompany.email)) {
+        return toast.error("Please enter a valid email address!");
+      }
       const formData = new FormData();
       formData.append("companyName", newCompany.name);
       formData.append("email", newCompany.email);
@@ -215,6 +217,8 @@ const ManageCompanies = () => {
       formData.append("address", newCompany.address);
       formData.append("country", newCompany.country);
       formData.append("vatCode", newCompany.vatPrefix || "");
+      formData.append("city", newCompany.city);
+      formData.append("postalCode", newCompany.postalCode);
 
       formData.append(
         "vatNumber",
@@ -312,6 +316,8 @@ const ManageCompanies = () => {
         contact: data.contact || "",
         address: data.address || "",
         country: data.country || "",
+        city: data.city || "",
+        postalCode: data.postalCode || "",
         vatPrefix,
         vatNumber,
         status: data.status || "Active",
@@ -503,43 +509,82 @@ const ManageCompanies = () => {
                     className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
                   />
                 </div>
+
+                {/* Country */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2 text-sm font-medium">
+                    <MapPin className="w-4 h-4" /> Country
+                    <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={newCompany.country}
+                    onValueChange={(val) =>
+                      setNewCompany((prev) => ({
+                        ...prev,
+                        country: val,
+                        // vatNumber: countryVatMap[val] || "", // auto-fill VAT
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries.map((country) => (
+                        <SelectItem key={country} value={country}>
+                          {country}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* City & Postal Code */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Country */}
+                  {/* City */}
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2 text-sm font-medium">
-                      <MapPin className="w-4 h-4" /> Country
-                      <span className="text-red-500">*</span>
+                      City <span className="text-red-500">*</span>
                     </Label>
-                    <Select
-                      value={newCompany.country}
-                      onValueChange={(val) =>
+                    <Input
+                      placeholder="Enter city name"
+                      value={newCompany.city}
+                      onChange={(e) =>
                         setNewCompany((prev) => ({
                           ...prev,
-                          country: val,
-                          // vatNumber: countryVatMap[val] || "", // auto-fill VAT
+                          city: e.target.value,
                         }))
                       }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select country" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {countries.map((country) => (
-                          <SelectItem key={country} value={country}>
-                            {country}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+                    />
                   </div>
 
-                  {/* VAT Number (Prefix + Number) */}
+                  {/* Postal Code */}
                   <div className="space-y-2">
+                    <Label className="flex items-center gap-2 text-sm font-medium">
+                      Postal Code <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      placeholder="Enter postal code"
+                      value={newCompany.postalCode}
+                      onChange={(e) =>
+                        setNewCompany((prev) => ({
+                          ...prev,
+                          postalCode: e.target.value.replace(/[^0-9]/g, ""), // numbers only
+                        }))
+                      }
+                      className="border-2 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* VAT Number (Prefix + Number) */}
+                  <div className="space-y-2 w-full">
                     <Label className="flex items-center gap-2 text-sm font-medium">
                       VAT Number
                     </Label>
 
-                    <div className="flex items-center border-2 rounded-lg overflow-hidden bg-white">
+                    <div className="flex items-center border-2 rounded-lg overflow-hidden bg-white w-full">
                       {/* VAT Country Code Dropdown */}
                       <Select
                         value={newCompany.vatPrefix}
@@ -605,10 +650,8 @@ const ManageCompanies = () => {
                       />
                     </div>
                   </div>
-                </div>
-                {/* Role & Status */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                  {/* Role & Status */}
+                  <div className="space-y-2 w-full">
                     <Label className="flex items-center gap-2 text-sm font-medium">
                       <CheckCircle2 className="w-4 h-4" /> Status
                     </Label>
@@ -618,7 +661,7 @@ const ManageCompanies = () => {
                         setNewCompany((prev) => ({ ...prev, status: val }))
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="border-2 h-[42px]">
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent>
@@ -742,11 +785,10 @@ const ManageCompanies = () => {
                     <td className="px-6 py-4">
                       <Badge
                         variant="secondary"
-                        className={`${
-                          company.status === "Active"
-                            ? "bg-emerald-100 text-emerald-700 border-emerald-200"
-                            : "bg-red-100 text-red-700 border-red-200"
-                        }`}
+                        className={`${company.status === "Active"
+                          ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                          : "bg-red-100 text-red-700 border-red-200"
+                          }`}
                       >
                         {company?.status || "-"}
                       </Badge>
