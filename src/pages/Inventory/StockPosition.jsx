@@ -20,12 +20,16 @@ const StockPosition = () => {
 
   // Normalize size
   const normalizeSize = (size) => {
-    if (!size) return "";
-    const s = size.toUpperCase();
-    if (s === "SM") return "S";
-    if (s === "MD") return "M";
-    return s;
-  };
+  if (!size) return "";
+  const s = size.toUpperCase();
+
+  if (s === "SM") return "S";
+  if (s === "MD") return "M";
+  if (s === "XXL") return "2XL";   // ⭐ ADD THIS
+
+  return s;
+};
+
 
   // ⭐ NEW: Fetch all items for dropdown
   const fetchItems = async () => {
@@ -60,7 +64,8 @@ const StockPosition = () => {
     fetchItems();
   }, []);
 
-  const sizePriority = ["S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL", "6XL"];
+  const sizePriority = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL", "6XL"];
+
 
   const sortedSizes = (sizes) =>
     sizes.sort((a, b) => sizePriority.indexOf(a) - sizePriority.indexOf(b));
@@ -72,7 +77,7 @@ const StockPosition = () => {
           item.sizes.map((s) => normalizeSize(s.size))
         )
       )
-    ).filter((sz) => sz !== "XS")
+    )
   );
 
   // ⭐ UPDATED TABLE ROWS WITH itemName ADDED
@@ -204,9 +209,12 @@ const StockPosition = () => {
                   <th className="p-3 text-left">Total Sold</th>
                   <th className="p-3 text-left">Total Purchased</th>
                   <th className="p-3 text-left">Stock Value</th>
-                  <th className="p-3 text-center whitespace-nowrap">Last Purchase Date</th>
-                <th className="p-3 text-center whitespace-nowrap ">Last Sale Date</th>
-
+                  <th className="p-3 text-center whitespace-nowrap">
+                    Last Purchase Date
+                  </th>
+                  <th className="p-3 text-center whitespace-nowrap ">
+                    Last Sale Date
+                  </th>
                 </tr>
               </thead>
 
@@ -227,10 +235,7 @@ const StockPosition = () => {
                   </tr>
                 ) : currentRows.length > 0 ? (
                   currentRows.map((row, i) => (
-                    <tr
-                      key={row.id}
-                      className="border-b  hover:bg-primary/5"
-                    >
+                    <tr key={row.id} className="border-b  hover:bg-primary/5">
                       <td className="p-3">{startIndex + i + 1}</td>
                       <td className="p-3 font-semibold whitespace-normal break-words ">
                         {row.itemName || "-"}
