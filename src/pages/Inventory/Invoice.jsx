@@ -931,7 +931,7 @@ const Invoice = () => {
                   Create Invoice
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-3xl max-h-full overflow-y-scroll bg-background/95 backdrop-blur-sm border-0 shadow-2xl">
+              <DialogContent onInteractOutside={(e) => e.preventDefault()} className="max-w-3xl max-h-full overflow-y-scroll bg-background/95 backdrop-blur-sm border-0 shadow-2xl">
                 <DialogHeader className="border-b border-border/50 pb-4">
                   <DialogTitle className="text-xl font-semibold flex items-center gap-2 text-foreground">
                     <FileSignature className="w-5 h-5 text-primary" />
