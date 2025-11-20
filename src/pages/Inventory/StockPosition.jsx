@@ -98,6 +98,9 @@ const StockPosition = () => {
       sizeMap[size] = { stock: s.stock };
     });
 
+    // ⭐ Calculate Grand Total Stock Value (Frontend Fix)
+ 
+
     // ⭐ Calculate totalQty from sizeMap
     const totalQtyCalculated = Object.values(sizeMap).reduce(
       (acc, s) => acc + (s.stock || 0),
@@ -117,6 +120,15 @@ const StockPosition = () => {
       stockValue: item.stockValue,
     };
   });
+     useEffect(() => {
+      if (stockPositionData.length > 0) {
+        const total = stockPositionData.reduce(
+          (acc, item) => acc + (item.stockValue || 0),
+          0
+        );
+        setGrandTotalStockValue(total);
+      }
+    }, [stockPositionData]);
 
   // ⭐ FILTER BY itemName INSTEAD OF CATEGORY
   const filteredRows = tableRows
