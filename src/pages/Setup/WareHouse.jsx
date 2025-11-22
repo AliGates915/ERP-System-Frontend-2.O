@@ -102,7 +102,7 @@ const WareHouse = () => {
 
   useEffect(() => {
     fetchWareHouse();
-  }, [fetchWareHouse]);
+  }, []);
 
   const filteredWarehouses = warehouses.filter(
     (warehouse) =>
@@ -178,31 +178,19 @@ const WareHouse = () => {
       if (response.data.success) {
         toast.success("Warehouse added successfully!");
 
-        const newRow = {
-          id: response.data.data._id,
-          name: response.data.data.warehouseName,
-          address: response.data.data.warehouseAddress,
-          incharge: response.data.data.inCharge,
-          itemsInStock: response.data.data.itemsInStock || 0,
-          PurchaseValue: response.data.data.totalPurchaseValue || 0,
-        };
-
-        // ⭐ INSTANT UPDATE
-        setWarehouses((prev) => [newRow, ...prev]);
-
         setIsAddOpen(false);
         clearForm();
 
-        // Optional — soft refresh from DB
-        fetchWareHouse();
+        // ⭐ INSTANT UPDATE SAME AS CATEGORY
       } else {
         toast.error("Failed to add warehouse!");
       }
+      fetchWareHouse();
     } catch (error) {
       console.error("❌ Error adding warehouse:", error);
       toast.error("Error adding warehouse!");
     } finally {
-      setButtonLoading(false);
+      setTimeout(() => setButtonLoading(false), 1200);
     }
   };
 
@@ -230,7 +218,9 @@ const WareHouse = () => {
       console.error("❌ Error deleting warehouse:", error);
       toast.error("Error deleting warehouse!");
     } finally {
-      setLoading(false);
+      setTimeout(() => {
+        setLoading(false);
+      }, 1200);
     }
   };
 
@@ -358,7 +348,12 @@ const WareHouse = () => {
               Export Report
             </Button>
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-              <DialogTrigger asChild>
+              <DialogTrigger
+                onClick={() => {
+                  clearForm(); // ⭐ RESET ALL STATES HERE
+                }}
+                asChild
+              >
                 <Button className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200">
                   <Plus className="w-4 h-4 mr-2" />
                   Add Warehouse
@@ -574,6 +569,7 @@ const WareHouse = () => {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 z-10" />
               <Input
+              autoComplete="new-password"
                 placeholder="Search by warehouse name, address, incharge, stock, or value..."
                 className="pl-12 pr-4 py-3 rounded-xl border-2 border-primary/20 focus:border-primary/50 bg-background/80 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 transition-all duration-300"
                 value={searchTerm}

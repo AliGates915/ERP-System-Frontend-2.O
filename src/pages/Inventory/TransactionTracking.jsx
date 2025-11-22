@@ -74,7 +74,7 @@ const TransactionTracking = () => {
 
     fetchTransactions();
   }, []);
-  // console.log({ transactionData });
+  console.log({ transactionData });
   // search
   const filteredData = transactionData.filter((item) => {
     const term = searchTerm.toLowerCase();

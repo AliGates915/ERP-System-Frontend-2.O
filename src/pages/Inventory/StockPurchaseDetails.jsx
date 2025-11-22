@@ -230,7 +230,7 @@ const StockPurchaseDetails = () => {
     }
   };
 
-  console.log({ itemNames });
+  // console.log({ itemNames });
 
   const fetchWarehouses = async () => {
     try {
@@ -624,7 +624,7 @@ const StockPurchaseDetails = () => {
     setAvailableSizes([]);
   };
 
-  console.log({ stockData });
+  console.log({ summary });
 
   return (
     <DashboardLayout>
@@ -1114,7 +1114,7 @@ const StockPurchaseDetails = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 gap-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 gap-y-6">
           {/* Existing 4 cards */}
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-md transition-shadow duration-300">
             <CardContent className="p-4">
@@ -1152,23 +1152,7 @@ const StockPurchaseDetails = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 hover:shadow-md transition-shadow duration-300">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-amber-700">
-                    Low Stock Items
-                  </p>
-                  <p className="text-2xl font-bold text-amber-900">
-                    {summary.lowStockItems || 0}
-                  </p>
-                </div>
-                <div className="p-2 bg-amber-500/10 rounded-lg">
-                  <AlertTriangle className="w-5 h-5 text-amber-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+       
 
           <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-md transition-shadow duration-300">
             <CardContent className="p-4">

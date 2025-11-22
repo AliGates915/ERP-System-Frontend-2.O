@@ -366,7 +366,10 @@ const Invoice = () => {
 
     if (selectedSizeObj && selectedSizeObj.stock === 1) {
       const alreadyUsed = invoiceItems.some(
-        (item) => item.itemId === itemId && item.size === size
+        (item, index) =>
+          index !== editingItemIndex && // ignore the item you are editing
+          item.itemId === itemId &&
+          item.size === size
       );
 
       if (alreadyUsed) {
@@ -508,7 +511,7 @@ const Invoice = () => {
   // Handle Finalize Invoice
   const handleFinalizeInvoice = async (invoiceId) => {
     try {
-      setLoading(true)
+      setLoading(true);
       toast.loading("Finalizing invoice...");
 
       const response = await api.put(
@@ -532,9 +535,9 @@ const Invoice = () => {
       toast.dismiss();
       console.error("Error finalizing invoice:", error);
       toast.error(error.response?.data?.message || "Error finalizing invoice");
-    }finally{
+    } finally {
       setTimeout(() => {
-        setLoading(false)
+        setLoading(false);
       }, 2000);
     }
   };
