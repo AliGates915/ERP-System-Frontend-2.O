@@ -55,11 +55,17 @@ import api from "../../Api/AxiosInstance";
 import InvoiceViewModal from "../Inventory/Models/InvoiceViewModal";
 
 const Invoice = () => {
+  const [draftId, setDraftId] = useState("");
   const [qtyError, setQtyError] = useState("");
   const [isCreditNoteOpen, setIsCreditNoteOpen] = useState(false);
   const [creditNoteInvoice, setCreditNoteInvoice] = useState(null);
   const [creditNoteItems, setCreditNoteItems] = useState([]);
   const [creditTotal, setCreditTotal] = useState(0);
+const [creditNoteNumber, setCreditNoteNumber] = useState("");
+const [manualAmount, setManualAmount] = useState("");
+const [isQtyEditOpen, setIsQtyEditOpen] = useState(false);
+const [editIndex, setEditIndex] = useState(null);
+const [editQty, setEditQty] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [availableSizes, setAvailableSizes] = useState([]);
@@ -940,42 +946,71 @@ const Invoice = () => {
 
     setCreditTotal(total);
   };
-  const handleSaveCreditNote = async () => {
-    try {
-      const removedItems = creditNoteItems.filter((it) => it.isRemoved);
+  const startEditQty = (index, item) => {
+  setEditIndex(index);
+  setEditQty(item.quantity);
+  setIsQtyEditOpen(true);
+};
 
-      if (removedItems.length === 0) {
-        toast.error("Please remove at least one item!");
-        return;
-      }
+const applyQtyChange = () => {
+  const updated = [...creditNoteItems];
+  updated[editIndex].quantity = Number(editQty);
 
-      const payload = {
-        originalInvoiceId: creditNoteInvoice._id,
-        creditAmount: creditTotal,
-        removedItems: removedItems.map((it) => ({
-          itemId: it.itemId?._id || it.itemId,
-          quantity: it.quantity,
-          unitPrice: it.unitPrice,
-          vatRate: it.vatRate,
-        })),
-      };
+  // Recalculate total
+  updated[editIndex].totalInclVAT =
+    updated[editIndex].quantity *
+    updated[editIndex].unitPrice *
+    (1 + updated[editIndex].vatRate / 100);
 
-      const response = await api.post("/inventory/credit-notes", payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+  setCreditNoteItems(updated);
+  setIsQtyEditOpen(false);
+  calculateCreditTotal(updated);
+};
 
-      if (response.data.success) {
-        toast.success("Credit note created successfully!");
-        setIsCreditNoteOpen(false);
-        fetchInvoices();
-      } else {
-        toast.error("Failed to create credit note");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Error creating credit note");
-    }
-  };
+const handleCreateDraftCreditNote = async () => {
+  try {
+    const removed = creditNoteItems.filter((i) => i.isRemoved);
+    if (removed.length === 0) return toast.error("Remove at least one item");
+
+    const payload = {
+      items: removed.map((it) => ({
+        itemId: it.itemId?._id || it.itemId,
+        quantity: it.quantity,
+        unitPrice: it.unitPrice,
+        vatRate: it.vatRate,
+      })),
+    };
+
+    const res = await api.post(
+      `/inventory/credit-note/draft/${creditNoteInvoice._id}`,
+      payload,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    setCreditNoteNumber(res.data.data.creditNoteNo);
+    setDraftId(res.data.data._id);
+
+    toast.success("Draft credit note created");
+  } catch (e) {
+    toast.error("Error creating draft");
+  }
+};
+const handleFinalizeCreditNote = async () => {
+  try {
+    const res = await api.post(
+      `/inventory/credit-note/finalize/${draftId}`,
+      { manualAmount: manualAmount || null },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    toast.success("Credit note finalized!");
+    setIsCreditNoteOpen(false);
+    fetchInvoices();
+  } catch (e) {
+    toast.error("Error finalizing credit note");
+  }
+};
+
 
   return (
     <DashboardLayout>
@@ -1913,51 +1948,107 @@ const Invoice = () => {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
-            {/* ITEMS LIST */}
-            <table className="w-full border">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="p-2 text-left">Item</th>
-                  <th className="p-2 text-left">Qty</th>
-                  <th className="p-2 text-left">Price</th>
-                  <th className="p-2 text-left">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {creditNoteItems.map((it, i) => (
-                  <tr key={i} className="border-t">
-                    <td className="p-2">{it.itemId?.itemName}</td>
-                    <td className="p-2">{it.quantity}</td>
-                    <td className="p-2">€{it.unitPrice}</td>
-
-                    <td className="p-2">
-                      <Button
-                        variant={it.isRemoved ? "destructive" : "outline"}
-                        size="sm"
-                        onClick={() => toggleItemRemove(i)}
-                      >
-                        {it.isRemoved ? "Undo" : "Remove"}
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {/* TOTAL */}
-            <div className="mt-4 font-semibold">
-              Credit Note Total: € {creditTotal.toFixed(2)}
+          {/* --- CREDIT NOTE NUMBER (after draft created) --- */}
+          {creditNoteNumber && (
+            <div className="p-3 bg-purple-100 border rounded text-purple-700 font-semibold">
+              Draft Credit Note No: {creditNoteNumber}
             </div>
+          )}
 
-            {/* SAVE */}
-            <Button
-              onClick={handleSaveCreditNote}
-              className="w-full bg-purple-600 text-white"
-            >
-              Create Credit Note
-            </Button>
+          {/* --- ITEMS TABLE --- */}
+          <table className="w-full border mt-4">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-2 text-left">Item</th>
+                <th className="p-2 text-left">Qty</th>
+                <th className="p-2 text-left">Price</th>
+                <th className="p-2 text-left">VAT (%)</th>
+                <th className="p-2 text-left">Total Incl. VAT</th>
+                <th className="p-2 text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {creditNoteItems.map((it, i) => (
+                <tr key={i} className="border-t">
+                  <td className="p-2">{it.itemId?.itemName}</td>
+                  <td className="p-2">{it.quantity}</td>
+                  <td className="p-2">€{it.unitPrice}</td>
+                  <td className="p-2">{it.vatRate}%</td>
+                  <td className="p-2">€{it.totalInclVAT?.toFixed(2)}</td>
+
+                  <td className="p-2 flex gap-2">
+                    {/* Edit Qty */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => startEditQty(i, it)}
+                    >
+                      Edit
+                    </Button>
+
+                    {/* Remove / Undo */}
+                    <Button
+                      variant={it.isRemoved ? "destructive" : "outline"}
+                      size="sm"
+                      onClick={() => toggleItemRemove(i)}
+                    >
+                      {it.isRemoved ? "Undo" : "Remove"}
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* --- EDIT QTY SMALL POPUP --- */}
+          {isQtyEditOpen && (
+            <div className="border rounded p-4 bg-gray-50">
+              <h4 className="font-semibold mb-2">Edit Quantity</h4>
+              <Input
+                type="number"
+                value={editQty}
+                onChange={(e) => setEditQty(e.target.value)}
+              />
+              <Button className="mt-2" onClick={applyQtyChange}>
+                Update
+              </Button>
+            </div>
+          )}
+
+          {/* --- TOTAL AMOUNT --- */}
+          <div className="mt-4 font-semibold text-lg">
+            Credit Note Total: € {creditTotal.toFixed(2)}
           </div>
+
+          {/* --- MANUAL OVERRIDE AMOUNT --- */}
+          <div className="mt-2">
+            <Label>Override Final Credit Amount (optional)</Label>
+            <Input
+              type="number"
+              placeholder="Enter custom credit amount"
+              value={manualAmount}
+              onChange={(e) => setManualAmount(e.target.value)}
+            />
+          </div>
+
+          {/* --- BUTTONS --- */}
+          {!creditNoteNumber && (
+            <Button
+              onClick={handleCreateDraftCreditNote}
+              className="w-full bg-yellow-600 text-white mt-4"
+            >
+              Create Draft Credit Note
+            </Button>
+          )}
+
+          {creditNoteNumber && (
+            <Button
+              onClick={handleFinalizeCreditNote}
+              className="w-full bg-purple-600 text-white mt-4"
+            >
+              Finalize Credit Note
+            </Button>
+          )}
         </DialogContent>
       </Dialog>
 
