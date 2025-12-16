@@ -105,8 +105,13 @@ const CategoryPage = () => {
   // 🟢 Fetch Category Data
   const fetchCategoryList = useCallback(async () => {
     try {
+       const token = localStorage.getItem("token");
       setLoading(true);
-      const response = await api.get("/categories");
+      const response = await api.get("/categories",  {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
       console.log("Res", response.data);
 
       if (response.data.success && Array.isArray(response.data.data)) {
