@@ -15,13 +15,20 @@ import { useEffect, useState } from "react";
 import api from "../../Api/AxiosInstance";
 
 const CompanySwitcher = () => {
+  const [switching, setSwitching] = useState(false);
+
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
-        const res = await api.get("/companies"); // your API route
+        const token = localStorage.getItem("token");
+        const res = await api.get("/companies/assigned", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }); // your API route
         setCompanies(res.data.data || []);
       } catch (error) {
         console.error("Error fetching companies", error);
@@ -34,36 +41,49 @@ const CompanySwitcher = () => {
     fetchCompanies();
   }, []);
 
-  const navigate = useNavigate();
+  const selectCompany = async (company) => {
+    try {
+      setSwitching(true);
+      const token = localStorage.getItem("token");
+      const user = JSON.parse(localStorage.getItem("user"));
 
-  const selectCompany = (company) => {
-    toast.success(`Switched to ${company.companyName}`);
-    localStorage.setItem("selectedCompany", JSON.stringify(company));
-    navigate("/");
-  };
+      const res = await api.post(
+        "/auth/login/company",
+        {
+          email: user.email,
+          companyId: company._id,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-  const getBadgeVariant = (role) => {
-    switch (role) {
-      case "Admin":
-        return "success";
-      case "Accountant":
-        return "destructive";
-      case "Manager":
-        return "outline";
-      case "Supervisor":
-        return "default";
-      case "Sales Head":
-        return "outline";
-      case "Finance Officer":
-      case "Operations Manager":
-        return "secondary";
-      default:
-        return "default";
+      // ✅ Reset token & user from response
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+
+      toast.success(`Switched to ${company.companyName}`);
+    } catch (error) {
+      console.error("Company switch failed", error);
+      toast.error("Failed to switch company");
+    } finally {
+      setSwitching(false); // 👈 stop loader
     }
   };
 
   return (
     <DashboardLayout>
+      {switching && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <p className="text-white text-sm">Switching company…</p>
+          </div>
+        </div>
+      )}
+
       <div className="min-h-screen flex justify-center bg-gradient-to-br from-background via-secondary to-background p-4">
         <div className="w-full max-w-8xl justify-between">
           <div className="text-left mb-8">

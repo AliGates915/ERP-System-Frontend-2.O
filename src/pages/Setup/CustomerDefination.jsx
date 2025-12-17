@@ -49,6 +49,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import api from "../../Api/AxiosInstance";
 import { toast } from "sonner";
+import { useAuth } from "../../context/AuthContext";
 
 const europeanCountries = [
   "Albania",
@@ -129,6 +130,7 @@ const CustomerDefinition = () => {
     activeCustomers: 0,
     customerLocations: 0,
   });
+  const { token } = useAuth();
 
   const handleDownload = () => toast.success("Customer report downloaded!");
 
@@ -152,7 +154,9 @@ const CustomerDefinition = () => {
   const fetchCustomerList = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get("/customers");
+      const response = await api.get("/customers", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       console.log("Res", response.data);
 
       if (response.data.success && Array.isArray(response.data.data)) {
@@ -208,32 +212,12 @@ const CustomerDefinition = () => {
       setTimeout(() => setLoading(false), 1500);
     }
   }, []);
-  console.log("Res", customerList);
+  // console.log("Res", customerList);
   useEffect(() => {
     fetchCustomerList();
   }, [fetchCustomerList]);
 
-  // Customer Code Increment
-  useEffect(() => {
-    if (customerList.length > 0) {
-      const codes = customerList
-        .map((c) => parseInt(c.customerCode?.replace(/\D/g, ""), 10))
-        .filter((n) => !isNaN(n));
 
-      const maxCode = Math.max(...codes, 0);
-      const nextCode = `CUST${String(maxCode + 1).padStart(3, "0")}`;
-
-      setNewCustomer((prev) => ({
-        ...prev,
-        customerCode: nextCode,
-      }));
-    } else {
-      setNewCustomer((prev) => ({
-        ...prev,
-        customerCode: "CUST001",
-      }));
-    }
-  }, [customerList]);
 
   // Customer Form States
   const [newCustomer, setNewCustomer] = useState({
@@ -256,8 +240,8 @@ const CustomerDefinition = () => {
 
   // Clear Form
   const clearForm = () => {
-    setNewCustomer({
-      customerCode: "",
+    setNewCustomer((prev) => ({
+      ...prev, // ✅ keep auto-generated customerCode
       customerName: "",
       phoneNumber: "",
       email: "",
@@ -271,7 +255,7 @@ const CustomerDefinition = () => {
       defaultVatRate: "",
       paymentTerms: "",
       categoryId: "",
-    });
+    }));
     setEditingCustomer(null);
   };
 
@@ -280,6 +264,7 @@ const CustomerDefinition = () => {
     try {
       setSaving(true);
       const payload = {
+        customerCode: newCustomer.customerCode,
         customerName: newCustomer.customerName,
         phoneNumber: newCustomer.phoneNumber,
         email: newCustomer.email,
@@ -295,10 +280,14 @@ const CustomerDefinition = () => {
       };
 
       if (editingCustomer) {
-        await api.put(`/customers/${editingCustomer.id}`, payload);
+        await api.put(`/customers/${editingCustomer.id}`, payload, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         toast.success("Customer updated successfully!");
       } else {
-        await api.post("/customers", payload);
+        await api.post("/customers", payload, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         toast.success("Customer added successfully!");
       }
 
@@ -317,8 +306,10 @@ const CustomerDefinition = () => {
   // Handle Delete
   const handleDelete = async (id) => {
     try {
-      const response = await api.delete(`/customers/${id}`);
-      console.log("Delete response:", response.data);
+      const response = await api.delete(`/customers/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      // console.log("Delete response:", response.data);
       toast.success("Customer deleted successfully!");
       setCustomerList((prev) => prev.filter((c) => c.id !== id));
       fetchCustomerList();
@@ -425,7 +416,27 @@ const CustomerDefinition = () => {
               <DialogTrigger asChild>
                 <Button
                   onClick={() => {
-                    clearForm(); // RESET ALL FIELDS
+                    // 👇 force fresh code calculation
+                    if (customerList.length > 0) {
+                      const codes = customerList
+                        .map((c) =>
+                          parseInt(c.customerCode?.replace(/\D/g, ""), 10)
+                        )
+                        .filter((n) => !isNaN(n));
+
+                      const maxCode = Math.max(...codes, 0);
+                      const nextCode = `CUST${String(maxCode + 1).padStart(
+                        3,
+                        "0"
+                      )}`;
+
+                      setNewCustomer((prev) => ({
+                        ...prev,
+                        customerCode: nextCode,
+                      }));
+                    }
+
+                    clearForm();
                     setEditingCustomer(null);
                   }}
                 >

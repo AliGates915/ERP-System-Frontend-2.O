@@ -78,8 +78,13 @@ const WareHouse = () => {
   // 🟢 Fetch Warehouse Data
   const fetchWareHouse = useCallback(async () => {
     try {
+        const token = localStorage.getItem("token");
       setLoading(true);
-      const response = await api.get("/warehouses");
+      const response = await api.get("/warehouses",{
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
       if (response.data.success && Array.isArray(response.data.data)) {
         const formattedData = response.data.data.map((w) => ({
@@ -172,8 +177,12 @@ const WareHouse = () => {
           email: newWarehouse.inchargeEmail,
         },
       };
-
-      const response = await api.post(`/warehouses`, payload);
+  const token = localStorage.getItem("token");
+      const response = await api.post(`/warehouses`, payload,{
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
       if (response.data.success) {
         toast.success("Warehouse added successfully!");
@@ -206,7 +215,12 @@ const WareHouse = () => {
   const handleDelete = async (id) => {
     try {
       setLoading(true);
-      const response = await api.delete(`/warehouses/${id}`);
+        const token = localStorage.getItem("token");
+      const response = await api.delete(`/warehouses/${id}`,{
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
       if (response.data.success) {
         toast.success(" Warehouse deleted successfully!");
@@ -261,8 +275,12 @@ const WareHouse = () => {
           email: newWarehouse.inchargeEmail,
         },
       };
-
-      const response = await api.put(`/warehouses/${newWarehouse.id}`, payload);
+  const token = localStorage.getItem("token");
+      const response = await api.put(`/warehouses/${newWarehouse.id}`, payload,{
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
       if (response.data.success) {
         toast.success("Warehouse updated successfully!");
@@ -359,7 +377,7 @@ const WareHouse = () => {
                   Add Warehouse
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl bg-background/95 backdrop-blur-sm border-0 shadow-2xl">
+              <DialogContent className="max-w-2xl max-h-full bg-background/95 overflow-y-scroll backdrop-blur-sm border-0 shadow-2xl">
                 <DialogHeader className="border-b border-border/50 pb-4">
                   <DialogTitle className="text-xl font-semibold flex items-center gap-2 text-foreground">
                     <Plus className="w-5 h-5 text-primary" />

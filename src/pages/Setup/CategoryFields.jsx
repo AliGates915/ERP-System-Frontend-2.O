@@ -87,20 +87,7 @@ const CategoryPage = () => {
     }
   };
 
-  const TableLoader = ({ message = "Loading..." }) => {
-    return (
-      <tr>
-        <td colSpan="9" className="py-20 text-center">
-          <div className="flex flex-col items-center justify-center">
-            <Loader className="w-10 h-10 text-primary animate-spin mb-2" />
-            <p className="text-sm text-muted-foreground font-medium">
-              {message}
-            </p>
-          </div>
-        </td>
-      </tr>
-    );
-  };
+ 
 
   // 🟢 Fetch Category Data
   const fetchCategoryList = useCallback(async () => {
