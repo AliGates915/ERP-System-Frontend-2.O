@@ -118,6 +118,7 @@ const navigation = [
     name: "Company Management",
     href: "/company-management",
     icon: Briefcase,
+     roles: ["Admin"],
     subNav: [
       {
         name: "Manage Companies",
@@ -136,7 +137,7 @@ const navigation = [
       },
     ],
   },
-  { name: "User Management", href: "/user-manegement", icon: User },
+  { name: "User Management", roles: ["Admin"], href: "/user-manegement", icon: User },
   { name: "Barcode", href: "/barcode", icon: Barcode },
   { name: "Communication", href: "/communication", icon: MessageSquare },
   {
@@ -166,7 +167,9 @@ const DashboardLayout = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const { logout, token } = useAuth();
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
 
+const filterNavigation=navigation.filter((item)=> !item.roles || item.roles.includes(user.role))
   const selectedCompany = JSON.parse(
     localStorage.getItem("selectedCompany") || "{}"
   );
@@ -448,7 +451,7 @@ const DashboardLayout = ({ children }) => {
           )}
         >
           <nav className="flex flex-col gap-2 p-4">
-            {navigation.map((item) => {
+            {filterNavigation.map((item) => {
               const isSubOpen = openSubNav[item.name];
 
               return (
